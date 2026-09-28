@@ -68,6 +68,7 @@ export function unofficialWinners(results: GameSimResult[], games: NflGame[], we
       winner: home ? team(g.home).abbr : team(g.away).abbr,
       pWin: home ? homeP : awayP,
       result: "pending" as const,
+      kickoff: g.kickoff,
     };
   });
 }
