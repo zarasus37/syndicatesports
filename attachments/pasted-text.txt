@@ -1,0 +1,41 @@
+AI Agents individual task:
+
+AI Agents: Roles, Capabilities, and Workflows
+AI agents are the system’s automation and intelligence engine, handling data processing, simulation orchestration, detection of value bets, optimization, and compliance. Below are their core roles:
+Data Ingestion Automation Agents
+• 	Automate Fetching and Validation: Continuously pull real-time and historical feeds, handle schema validation, and preprocess for downstream models.
+• 	Data Cleansing and Deduplication: AI-driven error detection, normalization by sport/type/time.
+• 	Adaptive API Integration: Handle failover between data providers, manage multi-source disparity, and perform health checks.
+Simulation Execution Agents
+• 	Parallelized Monte Carlo Runs: AI orchestrates batch simulations across multiple markets, using optimized random sampling, stratified variance reduction, and real-time parameter adjustment.
+• 	Scenario Stress Tests: Simulate the impact of external factors—such as point spread movement, last-minute lineup changes, or public betting surges—on predicted outcomes.
+• 	Dynamic Parameter Tuning: Adjust win probabilities, edge estimates, and stake sizes based on live model feedback and market conditions.
++EV (Positive Expected Value) Detection Agents
+• 	Probability Calibration: Apply AI-based probability models (ensemble methods, neural networks, etc.) trained on historical data to estimate true event likelihoods.
+• 	Value Bet Identification: Compare unbiased “true” probabilities against live bookmaker odds after removing vigorish (the “juice”) to uncover +EV situations.
+• 	Edge Management: Track and adapt to changing market inefficiencies, adjusting for line moves and betting limits.
+• 	Community and Market Benchmarking: Compare agent performance to sharp bettors and model closing line value (CLV) to validate true predictive edge.
+Parlay Optimization Agents
+• 	Leg Combination Optimization: Simulate millions of 3-leg parlay combinations, prioritizing minimal covariance and maximizing joint +EV potential.
+• 	Correlation Detection: Use AI to identify and minimize correlation between legs, avoiding over-exposure that invalidates theoretical edge.
+• 	Point Buying/Teaser Strategy Simulation: Integrate logic to adjust for buying or selling points, estimate the fair cost, and exploit key number frequencies (e.g., NFL -3, -7), modeling market inefficiencies.
+• 	Spread and Totals Movement: Simulate the impact of line movement and apply fair price charts for point buying, adjusting EV calculations accordingly.
+Risk Management and Compliance Agents
+• 	Auto Stake Sizing: Employ Kelly criterion and alternative bankroll strategies based on simulation distributions to optimize bankroll growth while reducing risk of ruin.
+• 	Regulatory Guardrails: Ensure all betting recommendations comply with jurisdictional restrictions, age/KYC checks, and responsible gambling limits (deposit/time-outs, self-exclusion integration).
+• 	Anomaly and Fraud Detection: Identify sudden spikes or suspicious patterns in betting, integrate with AML and fraud logic modules for early flagging.
+Monitoring, Logging, and Model Health Agents
+• 	Prometheus/Grafana Integration: Track latency, error rates, model prediction accuracy, data drift, resource utilization, and alert on anomalies.
+• 	Model Retraining and Drift Detection: Trigger retraining or recalibration on data or concept drift, maintain model versioning, and automate performance backtests against live data.
+
+Parlay Optimization and Point Buying Strategies
+Optimized Parlay Construction
+Three-leg parlay optimization is critical for maximizing risk-adjusted returns. The AI agent’s process includes:
+• 	Simulation of Outcomes: For each potential triplet, Monte Carlo routines assess the distribution of possible returns under joint edge scenarios.
+• 	Correlation Mitigation: Leg choices are filtered to minimize correlation, avoiding scenarios such as stacking multiple unders on the same game or participant.
+• 	Dynamic Odds Shopping: Real-time comparison of leg odds across sportsbooks maximizes payout potential and isolates arbitrage opportunities.
+• 	Edge Maintenance: After point buying or spread movement, the agent recalculates the net EV, pruning combinations that fail to retain a statistically significant edge.
+Point Buying and Spread Analysis
+Point buying—moving a spread/total by a half or full point—can alter both implied probability and expected value. The system must:
+• 	Fair Value Calculation: Use empirical game margin data to estimate the true chance of a particular outcome landing on key numbers (e.g., NFL games ending by a margin of 3). AI agents then compare the true value of buying/selling points against the price offered, informing or auto-executing the optimal decision.
+• 	Simulation of Point Movements: Monte Carlo routines are run with alternate spreads to validate the change in outcome probability and update the EV calculation accordingly.

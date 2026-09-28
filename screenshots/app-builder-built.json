@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "SyndicateSports",
+      "hasCanvas": false,
+      "bodyTextLen": 639,
+      "bodyTextHash": "9cfae2741edfb7046ac101920d11c6ae891b66f0ebb6894e21a5d261bc34cb30",
+      "bodyTextPrefix": "Skip to content SyndicateSports WEEK 03 · 2026 BETA Record Slate",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "SyndicateSports",
+      "hasCanvas": false,
+      "bodyTextLen": 628,
+      "bodyTextHash": "e16a9dcf167a8dae7121b9314c020700b5dc7470614b1caad5643c2dbff32884",
+      "bodyTextPrefix": "Skip to content SyndicateSports WEEK 03 · 2026 BETA PUBLIC BETA ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}

@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/record",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "SyndicateSports",
+      "hasCanvas": false,
+      "bodyTextLen": 3467,
+      "bodyTextHash": "d9c1d136fe4c600af3877cb4bda22d6c8afd7fa4b7f20d5879246f968d4d0a58",
+      "bodyTextPrefix": "Skip to content SyndicateSports WEEK 03 · 2026 BETA Record Slate",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/record.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "SyndicateSports",
+      "hasCanvas": false,
+      "bodyTextLen": 3455,
+      "bodyTextHash": "cc4501dc57994005255c66c34d2ee63dcbd65aa3f8c205d3f3235f00b1466463",
+      "bodyTextPrefix": "Skip to content SyndicateSports WEEK 03 · 2026 BETA THE RECORD E",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/record-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/record.json"
+}

@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8080/learn",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Syndicate",
+      "hasCanvas": false,
+      "bodyTextLen": 2621,
+      "bodyTextHash": "bebb5becb9fe99752be15c80da72269dcb9a6bb55475a8a0f0b3577426c4479a",
+      "bodyTextPrefix": "Skip to slate Syndicate WEEK 03 · 2026 Slate Book Parlays Props ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/learn-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Syndicate",
+      "hasCanvas": false,
+      "bodyTextLen": 2876,
+      "bodyTextHash": "6e8d0d6dd50e2ef0d0b60d5982b00356e6518ba79c5b5c9fc018d790eb7aefca",
+      "bodyTextPrefix": "Skip to slate Syndicate WEEK 03 · 2026 FEEDBACK LOOP Learn Every",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/learn-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [
+    "BRAND NOTE: no custom public/og.jpg — the platform will serve the og.grok.me placeholder. Custom cards are the default for games of every kind (DOM board/word games included), whimsical apps, creative tools, and brand-forward pages — only plain utilities (converters, CRUD trackers, admin dashboards) keep the placeholder. If this app is not a plain utility, finish the brand-asset pass per /workspace/.grok/skills/og/SKILL.md."
+  ],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/learn-preview.json"
+}

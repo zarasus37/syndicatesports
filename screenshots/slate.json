@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/slate",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "SyndicateSports",
+      "hasCanvas": false,
+      "bodyTextLen": 3179,
+      "bodyTextHash": "84b072d05adcb0d3f2d7151134770a2eaa2f0f0afbb3da9800ac371573e4a2f5",
+      "bodyTextPrefix": "Skip to content SyndicateSports WEEK 03 · 2026 BETA Record Slate",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/slate.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "SyndicateSports",
+      "hasCanvas": false,
+      "bodyTextLen": 3003,
+      "bodyTextHash": "65c495a415e9ba38b4d626692aa7bdd541e708e375f28387ac8470cb597602f8",
+      "bodyTextPrefix": "Skip to content SyndicateSports WEEK 03 · 2026 BETA MONTE CARLO ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/slate-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/slate.json"
+}

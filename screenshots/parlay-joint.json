@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8080/parlay",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Syndicate",
+      "hasCanvas": false,
+      "bodyTextLen": 1939,
+      "bodyTextHash": "8badb27269854b60eef053e1a48bb49d1a35d5fa95d8a8bd8ccc589cfaec5290",
+      "bodyTextPrefix": "Skip to slate Syndicate WEEK 03 · 2026 Slate Book Parlays Props ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/parlay-joint.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Syndicate",
+      "hasCanvas": false,
+      "bodyTextLen": 1926,
+      "bodyTextHash": "479d73296aae8e115969b1aef3836f7c262903f27c439eaf4579d7fa8e8a286d",
+      "bodyTextPrefix": "Skip to slate Syndicate WEEK 03 · 2026 THREE-LEG BOOK Parlay opt",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/parlay-joint-mobile.png"
+    }
+  },
+  "brandWarnings": [
+    "BRAND NOTE: no custom public/og.jpg — the platform will serve the og.grok.me placeholder. Custom cards are the default for games of every kind (DOM board/word games included), whimsical apps, creative tools, and brand-forward pages — only plain utilities (converters, CRUD trackers, admin dashboards) keep the placeholder. If this app is not a plain utility, finish the brand-asset pass per /workspace/.grok/skills/og/SKILL.md."
+  ],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/parlay-joint.json"
+}
