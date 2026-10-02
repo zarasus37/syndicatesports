@@ -9,6 +9,9 @@ import { deskFeeds } from "@/lib/nfl/feeds";
 import { ARCHITECTURE } from "@/lib/nfl/modules";
 import { activeGames } from "@/lib/nfl/slate";
 import { useDesk } from "@/lib/nfl/store";
+
+/** Stable empty reference for store value ?? [] fallbacks. */
+const EMPTY: never[] = [];
 import { team } from "@/lib/nfl/teams";
 import type { AgentId, GameSimResult } from "@/lib/nfl/types";
 import { cn, formatPct } from "@/lib/utils";
@@ -35,9 +38,11 @@ function AgentsPage() {
   const runId = useDesk((s) => s.runId);
   const lastRunMs = useDesk((s) => s.lastRunMs);
   const sims = useDesk((s) => s.sims) ?? 12000;
-  const parlays = useDesk((s) => s.parlays) ?? [];
-  const props = useDesk((s) => s.props) ?? [];
-  const tickets = useDesk((s) => s.tickets) ?? [];
+  // Stable empty references. `?? []` allocates a new array on every render, so
+  // the memo below saw a changed dependency each time and recomputed anyway.
+  const parlays = useDesk((s) => s.parlays) ?? EMPTY;
+  const props = useDesk((s) => s.props) ?? EMPTY;
+  const tickets = useDesk((s) => s.tickets) ?? EMPTY;
   const bankroll = useDesk((s) => s.bankroll) ?? 10000;
   const slateGames = activeGames();
   const weatherOk = useDesk((s) => s.weatherOk);

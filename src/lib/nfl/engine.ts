@@ -9,7 +9,7 @@ import { calibrateProb } from "./reliability";
 import { gaussian, poisson, mulberry32 } from "./rng";
 import { buildFeatures, scoreAnomaly, steamSignal } from "./flags";
 import { analyzeSharp } from "./sharp";
-import { BASE_STD, BODY_SD, KEY_NUMBERS, Q4_SD } from "./config";
+import { BASE_STD, BODY_SD, DEFAULT_SIMS, KEY_NUMBERS, Q4_SD } from "./config";
 import { getGame } from "./slate";
 import { clvPts } from "./tape";
 import { TEAMS } from "./teams";
@@ -24,8 +24,19 @@ import type {
   TeamAbbr,
 } from "./types";
 
-const BINS_FROM = -36;
-const BINS_TO = 36;
+/**
+ * Histogram span. Fixed rather than per-game so two matchups can be compared
+ * on the same axis.
+ *
+ * At +/-36 a game with a large spread and a lopsided mean genuinely censored
+ * real mass: a -11.5 favourite at 16.3 SD puts about 6.7% of its paths below
+ * -36, all folded into the first bar. At +/-48 that drops to roughly 1.2%,
+ * and for a near-pick'em game either bound is already below 0.05%. The range
+ * costs 11 extra bars, and `MarginChart` scales off `histogram.length`, so
+ * nothing downstream has to know.
+ */
+const BINS_FROM = -48;
+const BINS_TO = 48;
 const BIN_W = 2;
 
 function variance(abbr: TeamAbbr): number {
@@ -123,7 +134,7 @@ function hashId(id: string): number {
 
 export function simulateGame(
   game: NflGame,
-  nSims = 8000,
+  nSims = DEFAULT_SIMS,
   seed = 20260921,
   opts?: { outIds?: string[] },
 ): GameSimResult {

@@ -17,7 +17,6 @@ export function GameRow({ result, rank, onCard }: { result: GameSimResult; rank:
   if (!game) return null;
   const away = team(game.away);
   const home = team(game.home);
-  const ev = result.pick.ev;
   const bet = bestTake(result);
   const plus = onCard ?? Boolean(bet);
   const pub = publicRead(game);

@@ -485,6 +485,26 @@ describe("margin distribution", () => {
     }
   });
 
+  it("does not materially censor the tails", () => {
+    // The edge bars should hold real probability mass, not a pile-up of
+    // everything beyond the range. Measured on the seeded slate the mean edge
+    // mass is a few percent; anything much higher means the span is too tight
+    // and the chart is overstating the extremes.
+    let worst = 0;
+    for (const r of slate()) {
+      const h = r.histogram;
+      const edge = h[0]!.p + h[h.length - 1]!.p;
+      worst = Math.max(worst, edge);
+    }
+    assert.ok(worst < 0.12, `worst edge mass ${(worst * 100).toFixed(1)}% — the span is clipping real probability`);
+  });
+
+  it("emits a stable bin count regardless of the game", () => {
+    // A fixed span is what lets two matchups share an axis.
+    const counts = new Set(slate().map((r) => r.histogram.length));
+    assert.equal(counts.size, 1, `histogram width varies by game: ${[...counts].join(", ")}`);
+  });
+
   it("never produces a negative score", () => {
     for (const r of rows) {
       assert.ok(r.homeMean >= 0, `${r.gameId}: negative home mean`);

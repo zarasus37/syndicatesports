@@ -45,7 +45,15 @@ export async function pullWeekSlate(fetchedAt: string): Promise<LiveSlate> {
   const events = data.events ?? [];
   if (!events.length || !week) return empty("scoreboard returned no games");
 
-  const [form, injuries, leagueMargins] = await Promise.all([loadForm(), loadInjuries(), loadLeagueMargins()]);
+  // The season comes from the scoreboard itself rather than a hard-coded year,
+  // so the desk follows the league into January instead of silently reading
+  // last season's games as current. The margin pull needs it before it can
+  // run, so this one call is sequenced rather than folded into the Promise.all.
+  const [form, injuries, leagueMargins] = await Promise.all([
+    loadForm(),
+    loadInjuries(),
+    loadLeagueMargins(season),
+  ]);
   const built = events.map((event) => toGame(event, week, fetchedAt, injuries)).filter((g): g is Built => Boolean(g));
   const outdoor = built.filter((g) => g.game.weather.roof === "open" || g.game.weather.roof === "neutral");
   const forecasts = await pool(outdoor, 5, async (row) => {
@@ -251,8 +259,8 @@ interface StandEntry {
   stats?: { name?: string; value?: number; displayValue?: string }[];
 }
 
-const SEASON_SCOREBOARD =
-  "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=2026&seasontype=2&limit=400";
+const SEASON_SCOREBOARD = (season: number) =>
+  `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${season}&seasontype=2&limit=400`;
 
 /**
  * Every completed game this season, as per-team scoring margins.
@@ -262,15 +270,18 @@ const SEASON_SCOREBOARD =
  * does not carry. Margins are `pointsFor - pointsAgainst` per game, which is
  * what `deriveVariance` turns into a width multiplier.
  *
- * Season and league are pinned in the URL. That is deliberate for now: the
- * desk is built around a single 2026 season, and a hard-coded season fails
- * loudly and obviously in January rather than silently reading last year's
- * games as current.
+ * `season` is the year the live scoreboard reported, never a literal. If it is
+ * somehow 0 we fall back to the current calendar year adjusted for the fact
+ * that an NFL season that reaches January is still last year's season, so the
+ * failure mode is "ask for this year's games" rather than "ask for a year that
+ * has not started and return nothing".
  */
-async function loadLeagueMargins(): Promise<Map<TeamAbbr, number[]>> {
+async function loadLeagueMargins(season: number): Promise<Map<TeamAbbr, number[]>> {
+  const now = new Date();
+  const year = season || (now.getUTCMonth() === 0 ? now.getUTCFullYear() - 1 : now.getUTCFullYear());
   const out = new Map<TeamAbbr, number[]>();
   try {
-    const data = await getJson(SEASON_SCOREBOARD);
+    const data = await getJson(SEASON_SCOREBOARD(year));
     const events = (data?.events ?? []) as {
       competitions?: {
         status?: { type?: { completed?: boolean } };

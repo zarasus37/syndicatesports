@@ -27,7 +27,7 @@ export function StatusBar() {
         <span className="text-warn">{env}</span>
         <span>{mode}</span>
         <span>{books.length >= 2 ? `odds ${books.length} books` : books.length === 1 ? "odds 1 book" : "odds not live"}</span>
-        <span>{books.length ? books.join(" · ") : `feeds ${PRODUCTION}`}</span>
+        <span>{books.length ? books.join(" \u00b7 ") : lastRunAt ? "odds feed returned no books" : `feeds ${PRODUCTION}`}</span>
         <span>model {MODEL_VERSION}</span>
         <span className="text-foreground">{!ready ? "…" : lastRunAt ? PHASE_COPY[phase] : "idle"}</span>
         <span>sheet {sheet}</span>

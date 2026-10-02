@@ -2,7 +2,7 @@ import { ASSUMPTIONS, downloadCsv, ledgerCsv, pnlSplit } from "@/lib/nfl/audit";
 import { WEEK } from "@/lib/nfl/slate";
 import { useDesk } from "@/lib/nfl/store";
 import type { LedgerTicket } from "@/lib/nfl/types";
-import { formatSigned, formatUnits } from "@/lib/utils";
+import { formatUnits } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 export function AuditPanel({ rows }: { rows: LedgerTicket[] }) {
