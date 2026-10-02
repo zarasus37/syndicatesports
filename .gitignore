@@ -1,0 +1,26 @@
+# deps
+node_modules
+
+# build output
+.vercel
+dist
+build
+.nitro
+.output
+*.tsbuildinfo
+
+# runtime logs / editor
+dev.log
+*.log
+.DS_Store
+.idea
+.vscode
+
+# scratch captures and exported bundles — regenerate, don't version
+screenshots/
+attachments/
+artifacts/
+*.zip
+
+# tool lockfile side-artifact
+.node_modules.lock

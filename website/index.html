@@ -1,0 +1,1267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SyndicateSports — Every take. Including the misses.</title>
+    <meta
+      name="description"
+      content="SyndicateSports combines market behavior, conditions, officiating, and a probability model into a bet, a lean, or a pass — then reviews which assumptions held. NFL research pilot. No live book. No charge. 21+."
+    />
+    <meta property="og:title" content="SyndicateSports — Every take. Including the misses." />
+    <meta
+      property="og:description"
+      content="An NFL betting research pilot. The card, the desk, and a public record that keeps the losses. No proven edge. 21+."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b0c0e;
+        --fg: #ececec;
+        --card: #131417;
+        --card-2: #16171b;
+        --muted: #8a8d93;
+        --border: rgb(255 255 255 / 0.08);
+        --input: rgb(255 255 255 / 0.1);
+        --profit: #5aa887;
+        --loss: #c56a6a;
+        --warn: #c4a15a;
+        --radius: 12px;
+        --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+        --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        border-color: var(--border);
+      }
+
+      html {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-sans);
+        line-height: 1.5;
+      }
+
+      h1,
+      h2,
+      h3 {
+        text-wrap: balance;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+
+      p {
+        text-wrap: pretty;
+        margin: 0;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .mono {
+        font-family: var(--font-mono);
+      }
+
+      /* ---------- nav ---------- */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: rgb(11 12 14 / 0.82);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .nav-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        height: 60px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .brand-mark {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #2a2d33, #1b1c20);
+        border: 1px solid var(--border);
+        display: grid;
+        place-items: center;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--fg);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .nav-links a:hover {
+        color: var(--fg);
+      }
+
+      .nav-cta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--fg);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 500;
+        padding: 10px 16px;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+        white-space: nowrap;
+      }
+
+      .btn:hover {
+        border-color: rgb(255 255 255 / 0.22);
+      }
+
+      .btn-primary {
+        background: var(--fg);
+        color: var(--bg);
+        border-color: var(--fg);
+      }
+
+      .btn-primary:hover {
+        background: #ffffff;
+        border-color: #ffffff;
+      }
+
+      .btn-ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--muted);
+      }
+
+      .btn-ghost:hover {
+        color: var(--fg);
+        border-color: transparent;
+      }
+
+      .menu-btn {
+        display: none;
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--fg);
+        width: 38px;
+        height: 38px;
+        cursor: pointer;
+        font-size: 18px;
+      }
+
+      .mobile-menu {
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 0 16px;
+      }
+
+      .mobile-menu a {
+        padding: 10px 4px;
+        font-size: 15px;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .mobile-menu a:last-child {
+        border-bottom: none;
+      }
+
+      .mobile-menu.open {
+        display: flex;
+      }
+
+      /* ---------- hero ---------- */
+      .hero {
+        padding: 88px 0 64px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgb(255 255 255 / 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(255 255 255 / 0.03) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+        pointer-events: none;
+      }
+
+      .hero-inner {
+        position: relative;
+        max-width: 760px;
+      }
+
+      .hero h1 {
+        font-size: clamp(40px, 7vw, 64px);
+        font-weight: 500;
+        line-height: 1.02;
+        margin: 20px 0 0;
+      }
+
+      .hero .tagline {
+        font-size: clamp(20px, 3vw, 26px);
+        color: var(--muted);
+        margin-top: 20px;
+      }
+
+      .hero .lede {
+        max-width: 620px;
+        font-size: 15px;
+        color: var(--muted);
+        margin-top: 20px;
+      }
+
+      .hero-cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 32px;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        margin-top: 28px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        padding: 3px 10px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .badge-warn {
+        color: var(--warn);
+        border-color: rgb(196 161 90 / 0.35);
+      }
+
+      /* ---------- feature cards ---------- */
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        padding: 24px 0 72px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+      }
+
+      .card .k {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+      }
+
+      .card p {
+        margin-top: 10px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      /* ---------- sections ---------- */
+      .section {
+        padding: 72px 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .section-head {
+        max-width: 640px;
+        margin-bottom: 40px;
+      }
+
+      .section-head h2 {
+        font-size: clamp(28px, 4vw, 40px);
+        font-weight: 500;
+        margin-top: 12px;
+      }
+
+      .section-head p {
+        margin-top: 14px;
+        font-size: 15px;
+        color: var(--muted);
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+      }
+
+      .panel h3 {
+        font-size: 16px;
+        font-weight: 500;
+      }
+
+      .panel .k {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .panel p {
+        margin-top: 10px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .list {
+        list-style: none;
+        margin: 16px 0 0;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .list li {
+        display: flex;
+        gap: 10px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .list li::before {
+        content: "";
+        flex: 0 0 auto;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--profit);
+        margin-top: 7px;
+      }
+
+      .list.never li::before {
+        background: var(--loss);
+      }
+
+      /* ---------- method steps ---------- */
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+
+      .step {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+      }
+
+      .step .n {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .step h3 {
+        font-size: 15px;
+        font-weight: 500;
+        margin-top: 10px;
+      }
+
+      .step p {
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      /* ---------- pricing ---------- */
+      .pricing {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .plan {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px;
+        position: relative;
+      }
+
+      .plan.featured {
+        border-color: rgb(255 255 255 / 0.22);
+      }
+
+      .plan .k {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+      }
+
+      .plan .price {
+        font-family: var(--font-mono);
+        font-size: 40px;
+        font-weight: 500;
+        margin-top: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .plan .price span {
+        font-size: 15px;
+        color: var(--muted);
+        font-weight: 400;
+      }
+
+      .plan .blurb {
+        margin-top: 12px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .plan .note {
+        margin-top: 16px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--warn);
+      }
+
+      .plan .list {
+        margin-top: 20px;
+      }
+
+      /* ---------- gates ---------- */
+      .gates {
+        display: grid;
+        gap: 10px;
+      }
+
+      .gate {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+      }
+
+      .gate .g-n {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted);
+        flex: 0 0 auto;
+        padding-top: 2px;
+      }
+
+      .gate h3 {
+        font-size: 15px;
+        font-weight: 500;
+      }
+
+      .gate p {
+        margin-top: 6px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .gate .status {
+        margin-left: auto;
+        flex: 0 0 auto;
+      }
+
+      /* ---------- roadmap ---------- */
+      .roadmap {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .rm {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+      }
+
+      .rm.current {
+        border-color: rgb(255 255 255 / 0.22);
+      }
+
+      .rm .k {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+      }
+
+      .rm h3 {
+        font-size: 15px;
+        font-weight: 500;
+        margin-top: 8px;
+      }
+
+      .rm p {
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      /* ---------- waitlist ---------- */
+      .waitlist {
+        background: var(--card-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 32px;
+        max-width: 640px;
+      }
+
+      .waitlist h2 {
+        font-size: 22px;
+        font-weight: 500;
+      }
+
+      .waitlist p {
+        margin-top: 10px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .waitlist form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .waitlist .row {
+        display: flex;
+        gap: 10px;
+      }
+
+      .waitlist input[type="email"] {
+        flex: 1;
+        min-width: 0;
+        background: var(--bg);
+        border: 1px solid var(--input);
+        border-radius: 10px;
+        color: var(--fg);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        padding: 11px 14px;
+      }
+
+      .waitlist input[type="email"]:focus {
+        outline: none;
+        border-color: var(--fg);
+      }
+
+      .plan-toggle {
+        display: flex;
+        gap: 8px;
+      }
+
+      .plan-toggle button {
+        flex: 1;
+        background: var(--bg);
+        border: 1px solid var(--input);
+        border-radius: 10px;
+        color: var(--muted);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        padding: 10px;
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .plan-toggle button.on {
+        border-color: var(--fg);
+        color: var(--fg);
+      }
+
+      .plan-toggle button .p {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        margin-top: 2px;
+        color: var(--muted);
+      }
+
+      .waitlist .fine {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      .waitlist .joined {
+        margin-top: 20px;
+        font-size: 14px;
+        color: var(--profit);
+      }
+
+      .waitlist .err {
+        font-size: 12px;
+        color: var(--loss);
+        margin-top: 4px;
+      }
+
+      /* ---------- footer ---------- */
+      .footer {
+        border-top: 1px solid var(--border);
+        padding: 40px 0 56px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .footer .cols {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+        justify-content: space-between;
+      }
+
+      .footer .fine {
+        margin-top: 24px;
+        font-size: 12px;
+        color: var(--muted);
+        max-width: 720px;
+      }
+
+      .footer a:hover {
+        color: var(--fg);
+      }
+
+      .footer .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      /* ---------- responsive ---------- */
+      @media (max-width: 900px) {
+        .cards,
+        .steps {
+          grid-template-columns: 1fr 1fr;
+        }
+        .two-col,
+        .pricing,
+        .roadmap {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .cards,
+        .steps {
+          grid-template-columns: 1fr;
+        }
+        .nav-links,
+        .nav-cta .btn-ghost {
+          display: none;
+        }
+        .menu-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .waitlist .row {
+          flex-direction: column;
+        }
+        .hero {
+          padding: 64px 0 48px;
+        }
+        .section {
+          padding: 56px 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="#top">
+          <span class="brand-mark">S</span>
+          SyndicateSports
+        </a>
+        <div class="nav-links">
+          <a href="#card">The Card</a>
+          <a href="#desk">The Desk</a>
+          <a href="#method">Method</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#gates">Gates</a>
+          <a href="#roadmap">Roadmap</a>
+        </div>
+        <div class="nav-cta">
+          <a class="btn btn-ghost" href="#gates">Launch gates</a>
+          <a class="btn btn-primary" href="#waitlist">Note interest</a>
+          <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
+        </div>
+      </div>
+      <div class="wrap mobile-menu" id="mobileMenu">
+        <a href="#card">The Card</a>
+        <a href="#desk">The Desk</a>
+        <a href="#method">Method</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#gates">Gates</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#waitlist">Note interest</a>
+      </div>
+    </nav>
+
+    <header class="hero" id="top">
+      <div class="wrap hero-inner">
+        <p class="eyebrow">SyndicateSports Pilot · 2026 NFL</p>
+        <h1>Syndicate<br />Sports</h1>
+        <p class="tagline">Every take. Including the misses.</p>
+        <p class="lede">
+          SyndicateSports does not treat any single signal as a win. It combines market behavior, conditions,
+          officiating, and a probability model into a bet, a lean, or a pass — then reviews which assumptions
+          held, which broke, and whether a weight actually moved. Pilot. No live book. No charge. No proven
+          edge. 21+.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#card">The card</a>
+          <a class="btn" href="#desk">The desk</a>
+          <a class="btn btn-ghost" href="#gates">Launch gates</a>
+        </div>
+        <div class="hero-meta">
+          <span class="badge badge-warn">Pilot</span>
+          <span>No live book</span>
+          <span>·</span>
+          <span>No charge</span>
+          <span>·</span>
+          <span>21+</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="wrap cards">
+      <div class="card">
+        <p class="k">The card</p>
+        <p>
+          Sides and totals only when a book posts the price. Props and parlays stay off the card until then.
+          Losses remain public.
+        </p>
+      </div>
+      <div class="card">
+        <p class="k">SU board</p>
+        <p>
+          A straight-up winner on all 16 games. Graded separately from the card.
+        </p>
+      </div>
+      <div class="card">
+        <p class="k">Pilot</p>
+        <p>
+          Founding pilot pricing is not active. $79 and $399 are target rates only, after Gates 1–7. No charge.
+          No proven edge.
+        </p>
+      </div>
+    </section>
+
+    <section class="section" id="card">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">The card</p>
+          <h2>This week’s plays, and the unit size we would actually bet.</h2>
+          <p>
+            Live-book sides and totals that clear the hurdle, sized in units. Props and model parlays are not
+            recommendations. The public record stays complete — including the losses.
+          </p>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <p class="k">Included</p>
+            <ul class="list">
+              <li>The card: live-book sides and totals that clear the hurdle, sized in units</li>
+              <li>This week’s plays and the unit size we would actually bet</li>
+              <li>SU board: a straight-up winner on all 16 games, graded separately</li>
+              <li>The desk: line movement, steam/RLM, handle vs tickets, referees, weather, half-Kelly</li>
+              <li>NFL founding rate for as long as the subscription stays active</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <p class="k">Not included</p>
+            <ul class="list never">
+              <li>Lock-of-the-week marketing or a tout record presented as ATS</li>
+              <li>One-click betting or sending a wager to a sportsbook</li>
+              <li>Deleted losses. The public record stays complete</li>
+              <li>A card charge, a deposit, or a paid entitlement before the launch gates pass</li>
+              <li>Other sports bundled into the NFL founding rate</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="desk">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">The desk</p>
+          <h2>What the market is doing, and why.</h2>
+          <p>
+            The desk is the evidence behind the card — the movement, the money, the conditions, and the
+            officials, read together rather than as any single signal.
+          </p>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <p class="k">Market</p>
+            <h3>Line movement, steam, and RLM</h3>
+            <p>
+              Where the number opened, where it moved, and whether the move looks like sharp money or public
+              handle. Steam and reverse line movement are read as context, not as a win.
+            </p>
+          </div>
+          <div class="panel">
+            <p class="k">Conditions</p>
+            <h3>Handle vs tickets, referees, weather</h3>
+            <p>
+              Money versus ticket counts, the officiating crew and its tendencies, and the weather that changes
+              how a game is played. Each is a weight in the model, not a headline.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="method">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Method</p>
+          <h2>One model, four inputs, a bet, a lean, or a pass.</h2>
+          <p>
+            No single signal is treated as a win. The model combines the inputs, produces a decision, and then
+            the review grades which assumptions held and which broke.
+          </p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <p class="n">01</p>
+            <h3>Market behavior</h3>
+            <p>Opening and closing numbers, movement, steam, and the shape of the money.</p>
+          </div>
+          <div class="step">
+            <p class="n">02</p>
+            <h3>Conditions</h3>
+            <p>Handle versus tickets, weather, and the situational context of the game.</p>
+          </div>
+          <div class="step">
+            <p class="n">03</p>
+            <h3>Officiating</h3>
+            <p>The crew, its tendencies, and how it has called similar games.</p>
+          </div>
+          <div class="step">
+            <p class="n">04</p>
+            <h3>Probability model</h3>
+            <p>A bet, a lean, or a pass — sized in units, then reviewed after the game grades.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="pricing">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Pricing</p>
+          <h2>Founding pilot pricing is not active.</h2>
+          <p>
+            $79 monthly and $399 seasonal are target rates for a future launch only after the data, audit, and
+            validation gates are satisfied. Joining the waitlist reserves no product access, creates no charge,
+            and makes no performance claim.
+          </p>
+        </div>
+        <div class="pricing">
+          <div class="plan">
+            <p class="k">Monthly</p>
+            <p class="price">$79<span>/month</span></p>
+            <p class="blurb">In-season card. Cancel any Monday. Win totals and futures are on the season plan.</p>
+            <p class="note">Target rate · not active · not reserved</p>
+          </div>
+          <div class="plan featured">
+            <p class="k">Season</p>
+            <p class="price">$399<span>/season</span></p>
+            <p class="blurb">
+              The card through preseason week 1, plus win totals, futures, and offseason prior updates.
+            </p>
+            <p class="note">Target rate · not active · not reserved</p>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: 20px; font-size: 14px; max-width: 640px">
+          These figures are targets, not an offer. Monthly is the in-season card. Season runs through preseason
+          week 1, then win totals and futures, if we ever bill. Neither number is for sale.
+        </p>
+      </div>
+    </section>
+
+    <section class="section" id="gates">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Launch gates</p>
+          <h2>Paid stays closed.</h2>
+          <p>
+            Paid launch requires Gates 1–7 passed. Gate 8 stays a measured, continuing requirement — pilot
+            feedback is an input into billing, not a box that has to stay checked forever. Founding rates are
+            targets only. They are not active.
+          </p>
+        </div>
+        <div class="gates">
+          <div class="gate">
+            <span class="g-n">G1</span>
+            <div>
+              <h3>Data integrity</h3>
+              <p>Every play, every price, every grade traceable to a source. No silent corrections.</p>
+            </div>
+            <span class="badge status">required</span>
+          </div>
+          <div class="gate">
+            <span class="g-n">G2</span>
+            <div>
+              <h3>Audit trail</h3>
+              <p>The public record is complete and reproducible — including the losses.</p>
+            </div>
+            <span class="badge status">required</span>
+          </div>
+          <div class="gate">
+            <span class="g-n">G3</span>
+            <div>
+              <h3>Validation</h3>
+              <p>The model is checked against the board, not against a cherry-picked sample.</p>
+            </div>
+            <span class="badge status">required</span>
+          </div>
+          <div class="gate">
+            <span class="g-n">G4</span>
+            <div>
+              <h3>Unit sizing</h3>
+              <p>Size is a function of edge and variance, not of confidence theater.</p>
+            </div>
+            <span class="badge status">required</span>
+          </div>
+          <div class="gate">
+            <span class="g-n">G5</span>
+            <div>
+              <h3>Legal &amp; compliance</h3>
+              <p>21+, responsible-gambling language, and no wagers placed on the reader’s behalf.</p>
+            </div>
+            <span class="badge status">required</span>
+          </div>
+          <div class="gate">
+            <span class="g-n">G6</span>
+            <div>
+              <h3>Product readiness</h3>
+              <p>The card, the desk, and the record work as promised before anything is for sale.</p>
+            </div>
+            <span class="badge status">required</span>
+          </div>
+          <div class="gate">
+            <span class="g-n">G7</span>
+            <div>
+              <h3>Billing readiness</h3>
+              <p>If we ever bill, the charge, the cancel, and the terms are clean.</p>
+            </div>
+            <span class="badge status">required</span>
+          </div>
+          <div class="gate">
+            <span class="g-n">G8</span>
+            <div>
+              <h3>Pilot feedback</h3>
+              <p>Ongoing. Feedback is an input into billing, not a box that stays checked forever.</p>
+            </div>
+            <span class="badge status">continuing</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="roadmap">
+      <div class="wrap">
+        <div class="section-head">
+          <p class="eyebrow">Roadmap</p>
+          <h2>Where this is going.</h2>
+          <p>Nothing here is promised. It is the order in which the product intends to earn the right to exist.</p>
+        </div>
+        <div class="roadmap">
+          <div class="rm current">
+            <p class="k">01 · Now</p>
+            <h3>Research pilot</h3>
+            <p>50 pilot research seats. A request reserves no access and creates no charge. Billing waits on Gates 1–7.</p>
+          </div>
+          <div class="rm current">
+            <p class="k">02 · Now</p>
+            <h3>Public beta</h3>
+            <p>The model is live and updates as weeks grade. Card, props, parlays, and units — paper only, seeded sheet.</p>
+          </div>
+          <div class="rm">
+            <p class="k">03 · After gates 1–7</p>
+            <h3>Founding rate (not charged)</h3>
+            <p>Target only: $79 / month in season, $399 through preseason week 1. Not active. Not reserved by the waitlist.</p>
+          </div>
+          <div class="rm">
+            <p class="k">04 · Next</p>
+            <h3>Longer record</h3>
+            <p>As more Sundays grade, the published price increases for new subscribers. Founding rates do not change.</p>
+          </div>
+          <div class="rm">
+            <p class="k">05 · After</p>
+            <h3>Live close</h3>
+            <p>CLV versus the kickoff number, not only the open. A further step in the public price. Founding rates stay put.</p>
+          </div>
+          <div class="rm">
+            <p class="k">06 · Post–Super Bowl</p>
+            <h3>Offseason markets</h3>
+            <p>Win totals, futures, and prior updates. Included on season. Monthly is inactive until the next regular season.</p>
+          </div>
+          <div class="rm">
+            <p class="k">07 · Later</p>
+            <h3>Additional sports</h3>
+            <p>Same method, new slates, after the NFL product meets the standard. Founding members get early access — not a free add-on.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="waitlist">
+      <div class="wrap">
+        <div class="waitlist">
+          <h2>Request a pilot research seat</h2>
+          <p>
+            Research recruitment, not a commercial funnel. Noting interest reserves no access, creates no charge,
+            and makes no performance claim. 21+ confirmation. This form does not take a card, a deposit, or a
+            promise of profit.
+          </p>
+          <form id="waitForm" novalidate>
+            <div class="plan-toggle" id="planToggle" role="radiogroup" aria-label="Plan of interest">
+              <button type="button" data-plan="monthly" aria-pressed="false">
+                Monthly
+                <span class="p">$79 / month · target</span>
+              </button>
+              <button type="button" data-plan="season" class="on" aria-pressed="true">
+                Season
+                <span class="p">$399 / season · target</span>
+              </button>
+            </div>
+            <div class="row">
+              <input
+                id="waitEmail"
+                type="email"
+                name="email"
+                autocomplete="email"
+                placeholder="you@email.com"
+                required
+              />
+              <button class="btn btn-primary" type="submit">Note interest</button>
+            </div>
+            <p class="fine" id="waitFine">21+ confirmation. No card, no deposit, no promise of profit.</p>
+            <p class="err" id="waitErr" hidden></p>
+          </form>
+          <p class="joined" id="waitJoined" hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="wrap">
+        <div class="cols">
+          <div>
+            <p class="brand" style="font-weight: 600">
+              <span class="brand-mark">S</span>
+              SyndicateSports
+            </p>
+            <p style="margin-top: 10px; max-width: 360px">
+              Every take. Including the misses. An NFL betting research pilot.
+            </p>
+          </div>
+          <div class="links">
+            <a href="#card">The Card</a>
+            <a href="#desk">The Desk</a>
+            <a href="#method">Method</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#gates">Gates</a>
+            <a href="#roadmap">Roadmap</a>
+            <a href="#waitlist">Note interest</a>
+          </div>
+        </div>
+        <p class="fine">
+          We do not place wagers. Nothing here is a recommendation to bet, and no performance claim is made.
+          No proven edge. Pilot. 21+. If gambling is a problem, call 1-800-GAMBLER.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var menuBtn = document.getElementById("menuBtn");
+        var mobileMenu = document.getElementById("mobileMenu");
+        menuBtn.addEventListener("click", function () {
+          var open = mobileMenu.classList.toggle("open");
+          menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+        mobileMenu.querySelectorAll("a").forEach(function (a) {
+          a.addEventListener("click", function () {
+            mobileMenu.classList.remove("open");
+            menuBtn.setAttribute("aria-expanded", "false");
+          });
+        });
+
+        var plan = "season";
+        var toggle = document.getElementById("planToggle");
+        toggle.querySelectorAll("button").forEach(function (b) {
+          b.addEventListener("click", function () {
+            plan = b.getAttribute("data-plan");
+            toggle.querySelectorAll("button").forEach(function (x) {
+              var on = x === b;
+              x.classList.toggle("on", on);
+              x.setAttribute("aria-pressed", on ? "true" : "false");
+            });
+          });
+        });
+
+        var form = document.getElementById("waitForm");
+        var email = document.getElementById("waitEmail");
+        var err = document.getElementById("waitErr");
+        var joined = document.getElementById("waitJoined");
+        var fine = document.getElementById("waitFine");
+        var KEY = "syndicate.waitlist.v1";
+
+        function load() {
+          try {
+            var raw = localStorage.getItem(KEY);
+            if (!raw) return null;
+            var e = JSON.parse(raw);
+            if (!e || !e.email) return null;
+            return e;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        var existing = load();
+        if (existing) {
+          form.hidden = true;
+          fine.hidden = true;
+          joined.hidden = false;
+          joined.textContent =
+            "Noted: " + existing.email + " · interest in " + (existing.plan === "season" ? "Season" : "Monthly") +
+            " target. No access reserved. No charge.";
+        }
+
+        form.addEventListener("submit", function (ev) {
+          ev.preventDefault();
+          var value = email.value.trim().toLowerCase();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            err.textContent = "That email doesn’t look live.";
+            err.hidden = false;
+            return;
+          }
+          err.hidden = true;
+          var entry = { email: value, plan: plan, at: Date.now(), attest21: true, pilot: true };
+          try {
+            localStorage.setItem(KEY, JSON.stringify(entry));
+          } catch (e) {}
+          form.hidden = true;
+          fine.hidden = true;
+          joined.hidden = false;
+          joined.textContent =
+            "Noted: " + value + " · interest in " + (plan === "season" ? "Season" : "Monthly") +
+            " target. No access reserved. No charge.";
+        });
+      })();
+    </script>
+  </body>
+</html>
