@@ -27,6 +27,12 @@ export function WhyLedger({ game, result }: { game: NflGame; result?: GameSimRes
       evidence: outs.notes[0] ?? "No confirmed outs toggled.",
     },
     {
+      component: "Money composition",
+      effect: `${formatSigned(result?.money.tiltPts ?? 0)} pts vs the line`,
+      confidence: (result?.money.pressure ?? 0) > 0 ? "Medium" : "—",
+      evidence: result?.money.note ?? "No run yet.",
+    },
+    {
       component: "Team ratings",
       effect: "excluded",
       confidence: "—",

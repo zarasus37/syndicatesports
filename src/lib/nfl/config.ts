@@ -18,7 +18,17 @@ export const BODY_SD = BASE_STD * Math.sqrt(BODY_VAR_SHARE) / Math.SQRT2;
 export const Q4_SD = BASE_STD * Math.sqrt(1 - BODY_VAR_SHARE) / Math.SQRT2;
 
 export const MIN_EV = 0.03;
-/** Max spread/total tickets on the live card. Props and parlays are separate. */
+
+/**
+ * Points of margin the model shifts, per unit of money-composition pressure.
+ *
+ * Derived rather than fitted: near the money line, cover probability moves
+ * about 0.0296 per point of margin shift at a 13.5pt league SD, so 1.5 points
+ * is worth roughly 4.4 points of cover probability — just under the ~5pp a
+ * textbook public fade is assumed to be worth, since fade edges decay. See
+ * `public.moneyRead` for the derivation and the RLM suppression rule.
+ */
+export const FADE_POINTS = 1.5;/** Max spread/total tickets on the live card. Props and parlays are separate. */
 export const MAX_CARD_SIDES = 6;
 export const KELLY_CAP = 0.5;
 export const MAX_BANKROLL_PCT = 0.03;

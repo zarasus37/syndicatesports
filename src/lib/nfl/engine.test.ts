@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { simulateGame } from "./engine.ts";
 import { BASE_STD, BODY_SD, MIN_EV, Q4_SD } from "./config.ts";
 import { conditionAdjustments } from "./conditions.ts";
+import { moneyRead } from "./public.ts";
 import { swingsFor } from "./outs.ts";
 import { wouldTake, bestTake } from "./card.ts";
 import { evFromProb, impliedProb, kellyFraction } from "./odds.ts";
@@ -63,15 +64,15 @@ describe("market anchoring — no double counting", () => {
     return copy;
   }
 
-  it("sets the margin to the market line plus condition drift, no more", () => {
+  it("sets the margin to the market line plus condition drift and the money tilt", () => {
     for (const game of GAMES) {
       const g = neutral(game);
       const cond = conditionAdjustments(g);
       const r = simulateGame(g, 40000, 31337, { outIds: [] });
-      const expected = -g.line.spread + cond.homePts - cond.awayPts;
+      const expected = -g.line.spread + cond.homePts - cond.awayPts + r.money.tiltPts;
       assert.ok(
         Math.abs(r.meanMargin - expected) < 0.35,
-        `${g.id}: mean margin ${r.meanMargin.toFixed(3)} vs market+conditions ${expected.toFixed(3)} — an unaccounted term is shifting the level`,
+        `${g.id}: mean margin ${r.meanMargin.toFixed(3)} vs market+conditions+money ${expected.toFixed(3)} — an unaccounted term is shifting the level`,
       );
     }
   });
@@ -214,6 +215,90 @@ describe("no personality branch", () => {
     const r = slate()[0]!;
     const keys = Object.keys(r);
     assert.ok(!keys.some((k) => /chaos/i.test(k)), `result still carries chaos fields: ${keys.join(",")}`);
+  });
+});
+
+describe("money composition", () => {
+  /**
+   * Two regressions pinned here.
+   *
+   * 1. The old `steam.pts * 0.4` shift double-counted the line move: the
+   *    engine anchors to `line.spread`, the current price, which already
+   *    contains the whole open-to-now move. Re-applying it restated the market.
+   *
+   * 2. Public and sharp money were computed and displayed but never reached
+   *    the mean, so the desk had no betting signal from the betting tape at
+   *    all. `moneyRead` is the term that carries them.
+   */
+  it("suppresses the fade when the line already moved against the crowd", () => {
+    for (const g of GAMES) {
+      const m = moneyRead(g);
+      if (m.lineMovedAgainstPublic) {
+        assert.equal(m.tiltPts, 0, `${g.id}: RLM should not be faded a second time`);
+      }
+    }
+  });
+
+  it("produces a tilt when tickets crowd one side and handle leans the other", () => {
+    const g = structuredClone(GAMES[0]!);
+    g.public = { ticketsHome: 78, handleHome: 60, ticketsOver: 50, handleOver: 50 };
+    g.line = { ...g.line, spread: g.line.spread - 0.5, spreadOpen: g.line.spread - 0.5 };
+    const m = moneyRead(g);
+    assert.ok(m.pressure > 0.4, `expected real pressure, got ${m.pressure}`);
+    assert.ok(m.tiltPts < 0, "tickets on home with handle against them should lean away from home");
+  });
+
+  it("does not fade when the handle agrees with the crowd", () => {
+    const g = structuredClone(GAMES[0]!);
+    // Tickets and money both on home. Nothing to fade.
+    g.public = { ticketsHome: 78, handleHome: 88, ticketsOver: 50, handleOver: 50 };
+    g.line = { ...g.line, spread: g.line.spread - 0.5, spreadOpen: g.line.spread - 0.5 };
+    assert.equal(moneyRead(g).tiltPts, 0, "agreed money must not produce a fade");
+  });
+
+  it("does not fade an even crowd", () => {
+    const g = structuredClone(GAMES[0]!);
+    g.public = { ticketsHome: 51, handleHome: 45, ticketsOver: 50, handleOver: 50 };
+    g.line = { ...g.line, spread: g.line.spread - 0.5, spreadOpen: g.line.spread - 0.5 };
+    assert.equal(moneyRead(g).tiltPts, 0, "a 51% crowd is not a fade");
+  });
+
+  it("reads the road side correctly, not just home", () => {
+    // Public on the away team, handle leaning home. The tilt must come back
+    // positive (lean home), which a home-relative implementation gets backwards.
+    const g = structuredClone(GAMES[1]!);
+    g.home = "NE";
+    g.away = "BUF";
+    g.public = { ticketsHome: 22, handleHome: 42, ticketsOver: 50, handleOver: 50 };
+    g.line = { ...g.line, spread: g.line.spread - 0.5, spreadOpen: g.line.spread - 0.5 };
+    const m = moneyRead(g);
+    assert.ok(m.tiltPts > 0, `away-side fade should lean home, got ${m.tiltPts}`);
+  });
+
+  it("carries the tilt into the simulated mean", () => {
+    for (const r of slate()) {
+      if (Math.abs(r.money.tiltPts) < 0.01) continue;
+      const g = GAMES.find((x) => x.id === r.gameId)!;
+      const marketMargin = -g.line.spread;
+      // The tilt has to be visible in the simulated margin, not just reported.
+      const moved = r.meanMargin - marketMargin;
+      assert.ok(
+        Math.abs(moved) > 0.01,
+        `${g.id}: reported a ${r.money.tiltPts} tilt but the mean did not move`,
+      );
+    }
+  });
+
+  it("names the side the money is on, not the side the tickets are on", () => {
+    // Regression: the note used to say "handle leans GB" while fading GB, on a
+    // game where 72% of tickets were on GB and the money was on ATL.
+    const g = GAMES.find((x) => x.id === "atl-gb")!;
+    const m = moneyRead(g);
+    assert.ok(m.tiltPts < 0, "atl-gb should fade the home side");
+    assert.ok(
+      /handle leans ATL/.test(m.note),
+      `note names the wrong money side: "${m.note}"`,
+    );
   });
 });
 

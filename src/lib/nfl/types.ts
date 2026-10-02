@@ -1,3 +1,5 @@
+import type { MoneyRead } from "./public";
+
 export type TeamAbbr =
   | "ARI"
   | "ATL"
@@ -288,6 +290,8 @@ export interface GameSimResult {
   steam: SteamSignal;
   steamPts: number;
   steamDir: "favorite" | "underdog" | "none";
+  /** Money-composition tilt actually applied to the mean. See `public.moneyRead`. */
+  money: MoneyRead;
   anomaly: AnomalyScore;
   sharp: SharpRead;
   pointBuy: PointBuyRow[];

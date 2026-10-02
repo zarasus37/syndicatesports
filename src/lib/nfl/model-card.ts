@@ -24,7 +24,9 @@ export const MODEL_CARD = {
   simulation: [
     "Expected scores invert the posted spread and total, so the market sets the level",
     "The engine moves off the line only on information the line could not carry at posting: weather, altitude, officiating crew, slot, and operator-confirmed outs",
-    "No team-rating term. A rating is a z-scored scoring margin built from the same record the spread already prices, so adding one to a market-derived mean counted strength twice",
+    "Money composition adds a fade tilt: tickets lopsided to one side while the handle leans the other. Public money, sharp money and reverse line movement all enter through this term",
+    "A reverse line move zeroes the tilt: the line already moved against the crowd, so fading again would count the same move twice",
+    "No team-rating term and no raw line-move term. Both are already inside the current price, so re-applying them double-counts. A rating is a z-scored scoring margin built from the same record the spread prices",
     `${ASSUMPTIONS.defaultSims.toLocaleString()} default paths, operator-capped higher`,
     "Cover probability on the spread; totals from the same paths",
     "Props: passing yards ~ normal; sacks ~ Poisson",

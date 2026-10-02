@@ -3,6 +3,7 @@ import { adjustPropMean, conditionAdjustments } from "./conditions";
 import { keyCall, rankScore } from "./keys";
 import { evFromProb, impliedProb, kellyFraction } from "./odds";
 import { outAdjustments } from "./outs";
+import { moneyRead } from "./public";
 import { getPriors } from "./priors";
 import { calibrateProb } from "./reliability";
 import { gaussian, poisson, mulberry32 } from "./rng";
@@ -176,13 +177,26 @@ export function simulateGame(
   const volScale = vol / BASE_STD;
   const bodySd = BODY_SD * volScale;
   const q4Sd = Q4_SD * volScale;
-  if (Math.abs(steam.pts) >= 1) {
-    const pri = getPriors().haircuts;
-    const mult = steam.steam === "rlm" ? pri.rlm : pri.steam;
-    const shift = steam.pts * 0.4 * mult;
-    hMean -= shift / 2;
-    aMean += shift / 2;
-  }
+  /**
+   * Money composition — the one part of the betting tape the line cannot carry.
+   *
+   * This replaces a `steam.pts * 0.4` shift that was the same double count as
+   * the old rating term: the engine anchors to `line.spread`, the CURRENT
+   * price, which already contains the entire open-to-now move. Adding 40% of
+   * that move again meant restating the market.
+   *
+   * `moneyRead` uses the parts a closing line genuinely does not encode — how
+   * the tickets split, how far the handle disagrees with them, and whether the
+   * line followed the crowd or already went against it. Public money, sharp
+   * money and reverse line movement all enter here.
+   */
+  const money = moneyRead(game);
+  // The tilt is expressed in POINTS OF MARGIN, so it is split across both
+  // sides. Adding it whole to home and subtracting whole from away would move
+  // the margin by 2x and drag the total with it. A fade is a lean on the
+  // spread, not a scoring-level change.
+  hMean += money.tiltPts / 2;
+  aMean -= money.tiltPts / 2;
 
   const margins: number[] = new Array(nSims);
   const totals: number[] = new Array(nSims);
@@ -323,6 +337,7 @@ export function simulateGame(
     steam: steam.steam,
     steamPts: steam.pts,
     steamDir: steam.dir,
+    money,
     anomaly,
     sharp: analyzeSharp(game, steam),
     pointBuy,
