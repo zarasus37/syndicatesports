@@ -48,6 +48,31 @@ export function teamNick(abbr: TeamAbbr): string {
   return TEAMS[abbr].name;
 }
 
+/**
+ * `variance` in the table above is a seeded placeholder, not a measurement.
+ * Once a live run has margin history it is replaced by the derived value — see
+ * `variance.ts` for the derivation and its two guards. The seeded numbers are
+ * the only way this field is ever hand-written, and they exist so the demo
+ * slate has plausible widths before any feed has run.
+ */
+export function applyTeamVariance(reads: { abbr: TeamAbbr; value: number }[]) {
+  for (const r of reads) {
+    const t = TEAMS[r.abbr];
+    if (t) t.variance = r.value;
+  }
+}
+
+/** Teams still carrying the seeded placeholder rather than a derived value. */
+export function seededVarianceTeams(): TeamAbbr[] {
+  return (Object.keys(SEEDED_VARIANCE) as TeamAbbr[]).filter((a) => TEAMS[a]?.variance === SEEDED_VARIANCE[a]);
+}
+
+const SEEDED_VARIANCE: Partial<Record<TeamAbbr, number>> = (() => {
+  const out: Partial<Record<TeamAbbr, number>> = {};
+  for (const t of Object.values(TEAMS)) out[t.abbr] = t.variance;
+  return out;
+})();
+
 export function applyTeamForm(rows: { abbr: TeamAbbr; record: string; pf: number; pa: number; ratingZ: number }[]) {
   for (const row of rows) {
     const t = TEAMS[row.abbr];

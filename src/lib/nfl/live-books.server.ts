@@ -199,6 +199,7 @@ export async function pullLiveBoard(): Promise<LiveBoard> {
     week: slate.week,
     games,
     teamForm: slate.teamForm,
+  teamMargins: slate.teamMargins,
     weatherOk: slate.weatherOk,
     injuryOk: slate.injuryOk,
   };

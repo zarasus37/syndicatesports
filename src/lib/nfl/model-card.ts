@@ -27,6 +27,7 @@ export const MODEL_CARD = {
     "Money composition adds a fade tilt: tickets lopsided to one side while the handle leans the other. Public money, sharp money and reverse line movement all enter through this term",
     "A reverse line move zeroes the tilt: the line already moved against the crowd, so fading again would count the same move twice",
     "No team-rating term and no raw line-move term. Both are already inside the current price, so re-applying them double-counts. A rating is a z-scored scoring margin built from the same record the spread prices",
+    "Distribution width is per-team and measured: a team's scoring-margin standard deviation against the league, shrunk toward neutral by how few games back it is, and bounded. Teams under three games run at league-average width rather than a bad estimate",
     `${ASSUMPTIONS.defaultSims.toLocaleString()} default paths, operator-capped higher`,
     "Cover probability on the spread; totals from the same paths",
     "Props: passing yards ~ normal; sacks ~ Poisson",

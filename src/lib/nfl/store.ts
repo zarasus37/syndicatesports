@@ -10,6 +10,8 @@ import { setPriors, type LearnedPriors } from "./priors";
 import { fetchBoxBoard } from "./box-score";
 import { applyGradeToAudit, gradeTicket, type BoxBoard } from "./box";
 import { GAMES, PROPS, WEEK, activeGames, getGame, installLiveGames } from "./slate";
+import { applyTeamVariance } from "./teams";
+import { deriveVariance } from "./variance";
 import { applyTeamForm } from "./teams";
 import { setDeskLive } from "./desk-meta";
 import { applyQuotes, isLiveBook } from "./books";
@@ -257,6 +259,10 @@ export const useDesk = create<DeskState>()((set, get) => ({
       injuryOk = board.injuryOk;
       week = board.week || WEEK;
       if (board.teamForm.length) applyTeamForm(board.teamForm);
+      // Variance is the primary driver of each game's margin width, so it gets
+      // a data-driven value the moment there is margin history. Teams with too
+      // few games keep the neutral multiplier rather than a bad estimate.
+      if (board.teamMargins.size) applyTeamVariance(deriveVariance(board.teamMargins));
       if (board.games.length >= 8) {
         installLiveGames(board.games, { replace: true });
         liveGames = board.games;

@@ -9,6 +9,8 @@ export interface LiveSlate {
   games: NflGame[];
   quotes: BookQuote[];
   teamForm: TeamFormRow[];
+  /** Per-team scoring margins across completed games, for variance derivation. */
+  teamMargins: Map<TeamAbbr, number[]>;
   weatherOk: boolean;
   injuryOk: boolean;
   error: string | null;
@@ -27,6 +29,7 @@ export async function pullWeekSlate(fetchedAt: string): Promise<LiveSlate> {
     games: [],
     quotes: [],
     teamForm: [],
+    teamMargins: new Map(),
     weatherOk: false,
     injuryOk: false,
     error,
@@ -42,7 +45,7 @@ export async function pullWeekSlate(fetchedAt: string): Promise<LiveSlate> {
   const events = data.events ?? [];
   if (!events.length || !week) return empty("scoreboard returned no games");
 
-  const [form, injuries] = await Promise.all([loadForm(), loadInjuries()]);
+  const [form, injuries, leagueMargins] = await Promise.all([loadForm(), loadInjuries(), loadLeagueMargins()]);
   const built = events.map((event) => toGame(event, week, fetchedAt, injuries)).filter((g): g is Built => Boolean(g));
   const outdoor = built.filter((g) => g.game.weather.roof === "open" || g.game.weather.roof === "neutral");
   const forecasts = await pool(outdoor, 5, async (row) => {
@@ -65,6 +68,7 @@ export async function pullWeekSlate(fetchedAt: string): Promise<LiveSlate> {
     games,
     quotes,
     teamForm: form,
+    teamMargins: leagueMargins,
     weatherOk: outdoor.length === 0 || weatherHits >= Math.ceil(outdoor.length / 2),
     injuryOk: injuries.size > 0,
     error: null,
@@ -242,6 +246,58 @@ async function loadForm(): Promise<TeamFormRow[]> {
 interface StandEntry {
   team?: { abbreviation?: string; displayName?: string };
   stats?: { name?: string; value?: number; displayValue?: string }[];
+}
+
+const SEASON_SCOREBOARD =
+  "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=2026&seasontype=2&limit=400";
+
+/**
+ * Every completed game this season, as per-team scoring margins.
+ *
+ * One request for the whole league rather than one per team — 32 schedule
+ * calls on every run would be a bad trade for a field the standings endpoint
+ * does not carry. Margins are `pointsFor - pointsAgainst` per game, which is
+ * what `deriveVariance` turns into a width multiplier.
+ *
+ * Season and league are pinned in the URL. That is deliberate for now: the
+ * desk is built around a single 2026 season, and a hard-coded season fails
+ * loudly and obviously in January rather than silently reading last year's
+ * games as current.
+ */
+async function loadLeagueMargins(): Promise<Map<TeamAbbr, number[]>> {
+  const out = new Map<TeamAbbr, number[]>();
+  try {
+    const data = await getJson(SEASON_SCOREBOARD);
+    const events = (data?.events ?? []) as {
+      competitions?: {
+        status?: { type?: { completed?: boolean } };
+        competitors?: { team?: { abbreviation?: string }; score?: string | number }[];
+      }[];
+    }[];
+
+    for (const event of events) {
+      const c = event.competitions?.[0];
+      if (!c || c.status?.type?.completed !== true) continue;
+      const sides = (c.competitors ?? [])
+        .map((x) => ({ abbr: espnAbbr(x.team?.abbreviation ?? ""), score: Number(x.score) }))
+        .filter((x): x is { abbr: TeamAbbr; score: number } => Boolean(x.abbr) && Number.isFinite(x.score));
+      if (sides.length !== 2) continue;
+      const [a, b] = sides as [{ abbr: TeamAbbr; score: number }, { abbr: TeamAbbr; score: number }];
+      // Push both sides: a team's margin is its score less the opponent's, and
+      // the same game contributes to both teams' distributions.
+      for (const [self, other] of [
+        [a, b],
+        [b, a],
+      ] as const) {
+        const list = out.get(self.abbr);
+        if (list) list.push(self.score - other.score);
+        else out.set(self.abbr, [self.score - other.score]);
+      }
+    }
+  } catch {
+    return new Map();
+  }
+  return out;
 }
 
 function stat(entry: StandEntry, name: string) {

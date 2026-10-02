@@ -19,6 +19,8 @@ export interface LiveBoard {
   week: number;
   games: NflGame[];
   teamForm: TeamFormRow[];
+  /** Per-team scoring margins across completed games. */
+  teamMargins: Map<TeamAbbr, number[]>;
   weatherOk: boolean;
   injuryOk: boolean;
 }
