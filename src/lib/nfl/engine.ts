@@ -8,7 +8,7 @@ import { calibrateProb } from "./reliability";
 import { gaussian, poisson, choice, mulberry32, type Rng } from "./rng";
 import { buildFeatures, scoreAnomaly, steamSignal } from "./flags";
 import { analyzeSharp } from "./sharp";
-import { BASE_STD, BODY_SD, KEY_NUMBERS, MEAN_SHIFT_FACTOR, Q4_SD } from "./config";
+import { BASE_STD, BODY_SD, KEY_NUMBERS, Q4_SD } from "./config";
 import { getGame } from "./slate";
 import { clvPts } from "./tape";
 import { TEAMS } from "./teams";
@@ -156,21 +156,33 @@ export function simulateGame(
   opts?: { outIds?: string[] },
 ): GameSimResult {
   const rng = mulberry32(seed + hashId(game.id));
-  const hR = rating(game.home);
-  const aR = rating(game.away);
   const spread = game.line.spread;
   const total = game.line.total;
 
+  /**
+   * The market line is the prior on team strength, and the only one we have.
+   *
+   * `marketH`/`marketA` invert the posted spread and total into an expected
+   * score for each side, so relative ability is already carried by the line.
+   * Anything added on top has to be information the market did *not* price.
+   *
+   * A team rating does not qualify. `ratingZ` is a z-scored scoring margin
+   * (`live-slate.server.ts` computes it straight from points scored/allowed),
+   * and the spread is the market's consensus margin built from that same record
+   * — so adding rating to a market-derived mean counted the same information
+   * twice. It inflated the spread, contaminated the total (both sides moved
+   * together when two strong teams met), and produced apparent edge that was
+   * really the market restated in different units.
+   *
+   * What remains is purely structural drift the line cannot know at posting:
+   * weather, altitude, officiating crew, slot, and operator-confirmed outs.
+   */
   const marketH = (total - spread) / 2;
   const marketA = (total + spread) / 2;
-  let hMean = marketH + hR * MEAN_SHIFT_FACTOR;
-  let aMean = marketA + aR * MEAN_SHIFT_FACTOR;
   const cond = conditionAdjustments(game);
-  hMean += cond.homePts;
-  aMean += cond.awayPts;
   const outs = outAdjustments(game, opts?.outIds);
-  hMean += outs.homePts;
-  aMean += outs.awayPts;
+  let hMean = marketH + cond.homePts + outs.homePts;
+  let aMean = marketA + cond.awayPts + outs.awayPts;
 
   const chaosProfile = matchupChaos(game);
   const fs = buildFeatures(game, { chaos: chaos && chaosProfile !== "NORMAL" });
@@ -244,6 +256,11 @@ export function simulateGame(
     // No tail-amplification step. Margin spread comes from the normal draws and
     // the chaos branch above only; a fatter tail has to be earned by variance
     // inputs (team `variance`, condition volMult, anomaly inflation).
+    //
+    // Flooring at zero truncates the left tail of a team modelled near ~17
+    // points, which lifts the mean score a little — measured at +0.145 on the
+    // total across the slate. It is small and it is the price of never emitting
+    // a negative score, but it is a bias, not a symmetry.
 
     const h = Math.round(Math.max(0, finalH));
     const a = Math.round(Math.max(0, finalA));

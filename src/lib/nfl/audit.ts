@@ -1,4 +1,4 @@
-import { MAX_BANKROLL_PCT, MAX_CARD_SIDES, MEAN_SHIFT_FACTOR, MIN_EV, DEFAULT_SIMS } from "./config";
+import { MAX_BANKROLL_PCT, MAX_CARD_SIDES, MIN_EV, DEFAULT_SIMS } from "./config";
 import { MODEL_VERSION, ODDS_SOURCE } from "./desk-meta";
 import { ticketPnl, ticketUnits } from "./learn";
 import { buildLedger } from "./ledger";
@@ -20,7 +20,12 @@ export const ASSUMPTIONS = {
   version: MODEL_VERSION,
   minEv: MIN_EV,
   maxCardSides: MAX_CARD_SIDES,
-  meanShift: MEAN_SHIFT_FACTOR,
+  /** Expected scores come from the posted spread and total, not from team
+   *  ratings. `ratingZ` is a z-scored scoring margin built from the same record
+   *  the line already prices, so applying it to a market-derived mean counted
+   *  team strength twice. The engine now moves off the line only on weather,
+   *  altitude, officiating, slot, and confirmed outs. */
+  marketAnchored: true,
   bankrollCap: MAX_BANKROLL_PCT,
   defaultSims: DEFAULT_SIMS,
   source: ODDS_SOURCE,

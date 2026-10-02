@@ -74,8 +74,8 @@ function LearnPage() {
             <dd>{ASSUMPTIONS.maxCardSides} sides</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Mean shift</dt>
-            <dd>{ASSUMPTIONS.meanShift}</dd>
+            <dt className="text-muted-foreground">Level</dt>
+            <dd>market-anchored</dd>
           </div>
           <div>
             <dt className="text-muted-foreground">Bankroll cap</dt>

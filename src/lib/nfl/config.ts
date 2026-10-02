@@ -17,7 +17,6 @@ export const BODY_VAR_SHARE = 0.9;
 export const BODY_SD = BASE_STD * Math.sqrt(BODY_VAR_SHARE) / Math.SQRT2;
 export const Q4_SD = BASE_STD * Math.sqrt(1 - BODY_VAR_SHARE) / Math.SQRT2;
 
-export const MEAN_SHIFT_FACTOR = 0.65;
 export const MIN_EV = 0.03;
 /** Max spread/total tickets on the live card. Props and parlays are separate. */
 export const MAX_CARD_SIDES = 6;

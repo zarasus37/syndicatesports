@@ -22,7 +22,9 @@ export const MODEL_CARD = {
     "Any ticket sent to a sportsbook",
   ],
   simulation: [
-    `Gaussian scoring with mean-shift factor ${ASSUMPTIONS.meanShift} vs the market mean`,
+    "Expected scores invert the posted spread and total, so the market sets the level",
+    "The engine moves off the line only on information the line could not carry at posting: weather, altitude, officiating crew, slot, and operator-confirmed outs",
+    "No team-rating term. A rating is a z-scored scoring margin built from the same record the spread already prices, so adding one to a market-derived mean counted strength twice",
     `${ASSUMPTIONS.defaultSims.toLocaleString()} default paths, operator-capped higher`,
     "Cover probability on the spread; totals from the same paths",
     "Props: passing yards ~ normal; sacks ~ Poisson",
@@ -40,6 +42,7 @@ export const MODEL_CARD = {
     "Props and model parlays have no live book price, so they are not recommendations",
     "Two weeks is not a season. Calibration vs climate can be negative while hit rate is high",
     "A no-bet run is still a run. Pass is a position",
+    "Being market-anchored means the engine does not claim a team is better than the line says. Any edge it reports has to come from weather, crew, slot, or outs — when none of those apply, the honest output is a pass",
     "Settlement is the ESPN scoreboard final for sides and totals. The archive string is not the grade. Props and parlays are not on that feed",
     "Close CLV is the DraftKings close on ESPN when the game is final. The recorded open CLV is not that number, and line plus CLV is not a close",
   ],

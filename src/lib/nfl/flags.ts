@@ -1,22 +1,17 @@
 import { ANOMALY_THRESHOLDS, ANOMALY_WEIGHTS, KEY_NUMBERS } from "./config";
 import { conditionAdjustments } from "./conditions";
+import { outAdjustments } from "./outs";
 import { againstPublic, PUBLIC_FADE, publicRead } from "./public";
-import { TEAMS } from "./teams";
 import type {
   AnomalyScore,
   FeatureSnapshot,
   GameSimResult,
   NflGame,
   SteamSignal,
-  TeamAbbr,
 } from "./types";
 
 export const STEAM_PTS = 1.5;
 export const RLM_PTS = 1.5;
-
-function rating(abbr: TeamAbbr): number {
-  return TEAMS[abbr]?.ratingZ ?? 0;
-}
 
 export function steamPts(game: NflGame): number {
   return game.line.spread - game.line.spreadOpen;
@@ -64,17 +59,32 @@ export function buildFeatures(
   game: NflGame,
   opts: { chaos?: boolean } = {},
 ): FeatureSnapshot {
-  const h = rating(game.home);
-  const a = rating(game.away);
-  const modelMargin = (h - a) * 3.2 + 1.4;
   const marketMargin = -game.line.spread;
+  const cond = conditionAdjustments(game);
+  const outs = outAdjustments(game);
+
+  /**
+   * Residual must measure the drift the pricer actually applies.
+   *
+   * This used to build a second, independent estimate of the margin from team
+   * ratings (`(home - away) * 3.2 + 1.4`) and report its gap to the line. That
+   * was incoherent twice over: it disagreed with the pricer about how much a
+   * rating is worth (3.2 points per z-unit here against 0.65 there), and the
+   * pricer has since dropped ratings entirely because they double-counted the
+   * market. Flagging disagreement the engine no longer acts on just manufactures
+   * anomaly score, and that score feeds volatility inflation in the sim.
+   *
+   * So the residual is now exactly the structural drift applied to the mean:
+   * conditions and outs. Same inputs, same sign, no second opinion.
+   */
+  const structuralDrift = cond.homePts - cond.awayPts + (outs.homePts - outs.awayPts);
+  const modelMargin = marketMargin + structuralDrift;
   const residual = modelMargin - marketMargin;
   const liveBoard = Boolean(game.line.books?.length);
   const move = liveBoard ? 0 : steamPts(game);
   const absMove = Math.abs(move);
   const tot = liveBoard ? 0 : totalMove(game);
   const pub = publicRead(game);
-  const cond = conditionAdjustments(game);
   const nearKey = KEY_NUMBERS.some((k) => Math.abs(Math.abs(game.line.spread) - k) < 0.2);
   const weatherStress = Math.max(
     cond.stress,

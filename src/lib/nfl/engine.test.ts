@@ -2,11 +2,14 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { simulateGame } from "./engine.ts";
 import { BASE_STD, BODY_SD, MIN_EV, Q4_SD } from "./config.ts";
+import { conditionAdjustments } from "./conditions.ts";
+import { swingsFor } from "./outs.ts";
 import { wouldTake, bestTake } from "./card.ts";
 import { evFromProb, impliedProb, kellyFraction } from "./odds.ts";
 import { unofficialWinners } from "./card.ts";
 import { GAMES, getGame } from "./slate.ts";
 import { DEFAULT_PRIORS, setPriors } from "./priors.ts";
+import type { NflGame } from "./types.ts";
 
 /**
  * Characterization tests for the Monte Carlo engine.
@@ -24,6 +27,93 @@ const SEED = 20260921;
 function slate(chaos = false) {
   return GAMES.map((g) => simulateGame(g, SIMS, SEED, chaos));
 }
+
+describe("market anchoring — no double counting", () => {
+  /**
+   * The regression this pins: expected scores used to be
+   *   market-implied score + ratingZ * MEAN_SHIFT_FACTOR
+   * where ratingZ is a z-scored scoring margin and the spread is the market's
+   * consensus margin built from that same record. That counted team strength
+   * twice and produced edge that was the market restated.
+   *
+   * The invariant: the simulated mean must equal the market line plus exactly
+   * the structural drift `conditionAdjustments` reports — nothing else. A
+   * rating term reintroduced anywhere fails here before it can ship.
+   *
+   * Tolerance covers two known effects, both bounded and both small next to the
+   * 0.65 x ratingZ term that used to sit here (worth up to 2.6 points):
+   *
+   *   - Monte Carlo error. BASE_STD / sqrt(sims) is ~0.072 at 40k, and these are
+   *     16 independent seeds, so the worst case runs ~3 SE.
+   *   - A small positive bias in the TOTAL, because the engine floors scores at
+   *     zero (`Math.max(0, ...)`) which truncates the left tail and lifts teams
+   *     modelled near ~17 points. Measured at +0.145 mean, +0.26 worst. The
+   *     margin is a difference of two such terms and shows no systematic sign.
+   *
+   * 0.35 / 0.45 sit far below any plausible reintroduced rating coefficient
+   * while leaving these two effects room.
+   */
+  function neutral(game: NflGame) {
+    const copy = structuredClone(game);
+    // Kill the tape term so only condition drift remains to account for.
+    copy.line = { ...copy.line, spreadOpen: copy.line.spread, totalOpen: copy.line.total };
+    return copy;
+  }
+
+  it("sets the margin to the market line plus condition drift, no more", () => {
+    for (const game of GAMES) {
+      const g = neutral(game);
+      const cond = conditionAdjustments(g);
+      const r = simulateGame(g, 40000, 31337, false, { outIds: [] });
+      const expected = -g.line.spread + cond.homePts - cond.awayPts;
+      assert.ok(
+        Math.abs(r.meanMargin - expected) < 0.35,
+        `${g.id}: mean margin ${r.meanMargin.toFixed(3)} vs market+conditions ${expected.toFixed(3)} — an unaccounted term is shifting the level`,
+      );
+    }
+  });
+
+  it("sets the total to the market line plus condition drift, no more", () => {
+    for (const game of GAMES) {
+      const g = neutral(game);
+      const cond = conditionAdjustments(g);
+      const r = simulateGame(g, 40000, 31337, false, { outIds: [] });
+      const expected = g.line.total + cond.homePts + cond.awayPts;
+      assert.ok(
+        Math.abs(r.meanTotal - expected) < 0.45,
+        `${g.id}: mean total ${r.meanTotal.toFixed(3)} vs market+conditions ${expected.toFixed(3)}`,
+      );
+    }
+  });
+
+  it("does not let two strong teams inflate the total", () => {
+    // The rating term shifted BOTH means the same way, so a game between two
+    // above-average teams got a total boost it had no business having. Pin the
+    // level to the line: no team profile may move the scoring level.
+    const g = neutral(GAMES[2]!);
+    const cond = conditionAdjustments(g);
+    const r = simulateGame(g, 40000, 2468, false, { outIds: [] });
+    const expected = g.line.total + cond.homePts + cond.awayPts;
+    assert.ok(Math.abs(r.meanTotal - expected) < 0.45, "team profile is leaking into the total");
+  });
+
+  it("applies outs on top of the line", () => {
+    // Outs are the one input the market genuinely could not price at posting,
+    // so they are allowed to move the level — and must actually do so.
+    const withQb = GAMES.filter((g) => ["atl-gb", "hou-ind", "lar-den"].includes(g.id));
+    let moved = 0;
+    for (const game of withQb) {
+      const g = neutral(game);
+      const cond = conditionAdjustments(g);
+      const base = -g.line.spread + cond.homePts - cond.awayPts;
+      const r = simulateGame(g, 20000, 1357, false, {
+        outIds: swingsFor(g.id).map((s) => s.id),
+      });
+      if (Math.abs(r.meanMargin - base) > 0.05) moved += 1;
+    }
+    assert.ok(moved > 0, "confirmed outs did not move any level — the one valid input is unwired");
+  });
+});
 
 describe("variance construction", () => {
   it("squares body and Q4 back to BASE_STD", () => {

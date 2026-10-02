@@ -42,7 +42,11 @@ export function AuditPanel({ rows }: { rows: LedgerTicket[] }) {
           profit={split.sumR > 0}
         />
         <Stat label="Min EV" value={`${ASSUMPTIONS.minEv * 100}%`} hint="post-juice hurdle" />
-        <Stat label="Mean shift" value={String(ASSUMPTIONS.meanShift)} hint="ratings vs market" />
+        <Stat
+          label="Level"
+          value={ASSUMPTIONS.marketAnchored ? "market" : "model"}
+          hint="ratings excluded — no double count"
+        />
       </div>
       {journal.length ? (
         <ol className="space-y-1.5">

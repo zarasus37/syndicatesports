@@ -1,15 +1,12 @@
-import { MEAN_SHIFT_FACTOR } from "@/lib/nfl/config";
 import { MARKET_AS_OF, MODEL_VERSION, ODDS_SOURCE } from "@/lib/nfl/desk-meta";
 import { conditionAdjustments } from "@/lib/nfl/conditions";
-import { team } from "@/lib/nfl/teams";
+import { outAdjustments } from "@/lib/nfl/outs";
 import type { GameSimResult, NflGame } from "@/lib/nfl/types";
 import { formatSigned } from "@/lib/utils";
 
 export function WhyLedger({ game, result }: { game: NflGame; result?: GameSimResult }) {
   const cond = conditionAdjustments(game);
-  const home = team(game.home);
-  const away = team(game.away);
-  const residual = (home.ratingZ - away.ratingZ) * MEAN_SHIFT_FACTOR;
+  const outs = outAdjustments(game);
   const rows = [
     {
       component: "Market number",
@@ -18,16 +15,22 @@ export function WhyLedger({ game, result }: { game: NflGame; result?: GameSimRes
       evidence: ODDS_SOURCE,
     },
     {
-      component: "Rating residual",
-      effect: `${formatSigned(residual)} pts vs the number`,
-      confidence: "Low",
-      evidence: `Shrunk ${MEAN_SHIFT_FACTOR}× toward the market. Model ${MODEL_VERSION}.`,
-    },
-    {
-      component: "Weather / slot",
+      component: "Weather / slot / crew",
       effect: `H ${formatSigned(cond.homePts)} · A ${formatSigned(cond.awayPts)}`,
       confidence: cond.notes.length ? "Medium" : "—",
       evidence: cond.notes[0] ?? "No weather/slot stress.",
+    },
+    {
+      component: "Outs",
+      effect: `H ${formatSigned(outs.homePts)} · A ${formatSigned(outs.awayPts)}`,
+      confidence: outs.applied.length ? "Medium" : "—",
+      evidence: outs.notes[0] ?? "No confirmed outs toggled.",
+    },
+    {
+      component: "Team ratings",
+      effect: "excluded",
+      confidence: "—",
+      evidence: `Not an input. A rating is a z-scored scoring margin the line already prices, so applying it here would double-count. Model ${MODEL_VERSION}.`,
     },
     {
       component: "Tape",
