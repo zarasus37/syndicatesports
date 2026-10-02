@@ -183,7 +183,10 @@ function toGame(event: RawEvent, week: number, fetchedAt: string, injuries: Map<
       priceBook: quote ? "DraftKings" : undefined,
       pricedAt: quote ? fetchedAt : undefined,
     },
-    public: { ticketsHome: 50, handleHome: 50, ticketsOver: 50, handleOver: 50 },
+    // Even placeholder. ESPN's public feed carries no ticket/handle splits, so the
+    // money-composition fade cannot run on live games. Flagged rather than left
+    // to look like a balanced crowd - see PublicBetting.sourced.
+    public: { ticketsHome: 50, handleHome: 50, ticketsOver: 50, handleOver: 50, sourced: false },
     weather: { venue: venueName, city: city || venueName, roof },
     notes,
     featured: network === "NBC",

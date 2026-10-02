@@ -104,6 +104,16 @@ export interface PublicBetting {
   ticketsOver: number;
   /** Percent of total handle on the over (0–100). */
   handleOver: number;
+  /**
+   * True only when these came from a real betting-split source.
+   *
+   * Live ingestion has none available, so it writes an even 50/50 placeholder
+   * and leaves this false. That matters: 50/50 is indistinguishable from a
+   * genuinely even split, so without the flag a missing signal reads
+   * identically to a crowd too even to fade. The money-composition tilt is
+   * silently inert without it, and the desk has to be able to say so.
+   */
+  sourced?: boolean;
 }
 
 export interface GameWeather {

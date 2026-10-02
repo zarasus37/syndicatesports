@@ -243,7 +243,7 @@ describe("money composition", () => {
 
   it("produces a tilt when tickets crowd one side and handle leans the other", () => {
     const g = structuredClone(GAMES[0]!);
-    g.public = { ticketsHome: 78, handleHome: 60, ticketsOver: 50, handleOver: 50 };
+    g.public = { ticketsHome: 78, handleHome: 60, ticketsOver: 50, handleOver: 50, sourced: true };
     g.line = { ...g.line, spread: g.line.spread - 0.5, spreadOpen: g.line.spread - 0.5 };
     const m = moneyRead(g);
     assert.ok(m.pressure > 0.4, `expected real pressure, got ${m.pressure}`);
@@ -253,14 +253,14 @@ describe("money composition", () => {
   it("does not fade when the handle agrees with the crowd", () => {
     const g = structuredClone(GAMES[0]!);
     // Tickets and money both on home. Nothing to fade.
-    g.public = { ticketsHome: 78, handleHome: 88, ticketsOver: 50, handleOver: 50 };
+    g.public = { ticketsHome: 78, handleHome: 88, ticketsOver: 50, handleOver: 50, sourced: true };
     g.line = { ...g.line, spread: g.line.spread - 0.5, spreadOpen: g.line.spread - 0.5 };
     assert.equal(moneyRead(g).tiltPts, 0, "agreed money must not produce a fade");
   });
 
   it("does not fade an even crowd", () => {
     const g = structuredClone(GAMES[0]!);
-    g.public = { ticketsHome: 51, handleHome: 45, ticketsOver: 50, handleOver: 50 };
+    g.public = { ticketsHome: 51, handleHome: 45, ticketsOver: 50, handleOver: 50, sourced: true };
     g.line = { ...g.line, spread: g.line.spread - 0.5, spreadOpen: g.line.spread - 0.5 };
     assert.equal(moneyRead(g).tiltPts, 0, "a 51% crowd is not a fade");
   });
@@ -271,7 +271,7 @@ describe("money composition", () => {
     const g = structuredClone(GAMES[1]!);
     g.home = "NE";
     g.away = "BUF";
-    g.public = { ticketsHome: 22, handleHome: 42, ticketsOver: 50, handleOver: 50 };
+    g.public = { ticketsHome: 22, handleHome: 42, ticketsOver: 50, handleOver: 50, sourced: true };
     g.line = { ...g.line, spread: g.line.spread - 0.5, spreadOpen: g.line.spread - 0.5 };
     const m = moneyRead(g);
     assert.ok(m.tiltPts > 0, `away-side fade should lean home, got ${m.tiltPts}`);
@@ -288,6 +288,24 @@ describe("money composition", () => {
         Math.abs(moved) > 0.01,
         `${g.id}: reported a ${r.money.tiltPts} tilt but the mean did not move`,
       );
+    }
+  });
+
+  it("reports missing splits as missing, not as a balanced crowd", () => {
+    // Live ingestion writes an even 50/50 placeholder and has no splits source.
+    // Without the flag that reads as "the crowd is balanced" — a confident
+    // zero — and the fade looks inert by choice rather than by absence.
+    const g = structuredClone(GAMES[0]!);
+    g.public = { ticketsHome: 50, handleHome: 50, ticketsOver: 50, handleOver: 50, sourced: false };
+    const m = moneyRead(g);
+    assert.equal(m.splitsAvailable, false, "unsourced splits must be reported as unavailable");
+    assert.equal(m.tiltPts, 0, "and must produce no tilt");
+    assert.match(m.note, /No betting splits/, `note should say why: "${m.note}"`);
+  });
+
+  it("reports sourced splits as available", () => {
+    for (const g of GAMES) {
+      assert.equal(moneyRead(g).splitsAvailable, true, `${g.id} should have sourced splits`);
     }
   });
 

@@ -28,8 +28,14 @@ export function WhyLedger({ game, result }: { game: NflGame; result?: GameSimRes
     },
     {
       component: "Money composition",
-      effect: `${formatSigned(result?.money.tiltPts ?? 0)} pts vs the line`,
-      confidence: (result?.money.pressure ?? 0) > 0 ? "Medium" : "—",
+      effect: result && !result.money.splitsAvailable
+        ? "unavailable"
+        : `${formatSigned(result?.money.tiltPts ?? 0)} pts vs the line`,
+      confidence: result && !result.money.splitsAvailable
+        ? "—"
+        : (result?.money.pressure ?? 0) > 0
+          ? "Medium"
+          : "—",
       evidence: result?.money.note ?? "No run yet.",
     },
     {

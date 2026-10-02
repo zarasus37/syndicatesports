@@ -6,6 +6,8 @@ export const PUBLIC_LEAN = 58;
 export const SPLIT_SHARP = 12;
 
 export interface PublicRead {
+  /** False when the game carries an even placeholder rather than real splits. */
+  sourced: boolean;
   ticketsHome: number;
   handleHome: number;
   ticketsAway: number;
@@ -34,6 +36,7 @@ export function publicRead(game: NflGame): PublicRead {
     splitHome >= SPLIT_SHARP ? "home" : splitHome <= -SPLIT_SHARP ? "away" : "even";
   const contrarian = fade !== null && sharpLean !== "even" && sharpLean !== fade;
   return {
+    sourced: game.public.sourced === true,
     ticketsHome,
     handleHome,
     ticketsAway,
@@ -71,6 +74,13 @@ export interface MoneyRead {
   pressure: number;
   /** True when the line already moved against the crowd (RLM) — no fade owed. */
   lineMovedAgainstPublic: boolean;
+  /**
+   * False when the game carries no real betting splits. Live ingestion has no
+   * split source, so it writes an even placeholder and the fade cannot run at
+   * all. This is a different thing from "the crowd is too even to fade", and
+   * the desk must not conflate them.
+   */
+  splitsAvailable: boolean;
   note: string;
 }
 
@@ -103,6 +113,18 @@ export function moneyRead(game: NflGame): MoneyRead {
   const p = publicRead(game);
   const publicSide = p.publicSide === "home" ? 1 : -1;
 
+  // No real splits means no fade signal at all. Say so rather than reporting a
+  // confident zero, which would read as "the crowd is balanced".
+  if (!p.sourced) {
+    return {
+      tiltPts: 0,
+      pressure: 0,
+      lineMovedAgainstPublic: false,
+      splitsAvailable: false,
+      note: "No betting splits on this game. Ticket and handle data is not in the live feed, so the fade cannot run.",
+    };
+  }
+
   // Ticket concentration. Nothing to fade at 52%; full pressure by 75%.
   const concentration = clamp01((p.publicPct - 52) / 23);
 
@@ -133,5 +155,5 @@ export function moneyRead(game: NflGame): MoneyRead {
           handleGap > 0 ? "leans the other way but the crowd is too even" : "agrees with the crowd"
         } — nothing worth fading.`;
 
-  return { tiltPts, pressure, lineMovedAgainstPublic, note };
+  return { tiltPts, pressure, lineMovedAgainstPublic, splitsAvailable: true, note };
 }
