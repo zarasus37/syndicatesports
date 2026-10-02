@@ -144,7 +144,7 @@ function LearnPage() {
           is what the next slate actually uses. Bars are 80% credible.
         </p>
         <ul className="mt-4 space-y-3">
-          {["rlm", "steam", "tnf", "public-fade", "whistle-over", "chaos", "wind", "all"].map((tag) => {
+          {["rlm", "steam", "tnf", "public-fade", "whistle-over", "wind", "all"].map((tag) => {
             const p = priors.posts[tag];
             if (!p) return null;
             return (

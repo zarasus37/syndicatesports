@@ -7,7 +7,7 @@ export const SWINGS: SwingPlayer[] = [
   { id: "garrett", gameId: "car-cle", name: "Myles Garrett", team: "CLE", pos: "EDGE", status: "active", pts: 2.4, sackMult: -0.16, note: "If he’s out, Carolina’s number is a different bet." },
   { id: "stbrown", gameId: "nyj-det", name: "Amon-Ra St. Brown", team: "DET", pos: "WR", status: "active", pts: -1.6, passMult: -0.08, note: "WR1. Dome game, volume is the whole over." },
   { id: "stroud", gameId: "hou-ind", name: "C.J. Stroud", team: "HOU", pos: "QB", status: "active", pts: -3.8, passMult: -0.16, note: "Texans are a small road favorite only if he’s out there." },
-  { id: "nix", gameId: "lar-den", name: "Bo Nix", team: "DEN", pos: "QB", status: "active", pts: -3.2, passMult: -0.14, note: "Altitude + SNF. Chaos engine needs the starter." },
+  { id: "nix", gameId: "lar-den", name: "Bo Nix", team: "DEN", pos: "QB", status: "active", pts: -3.2, passMult: -0.14, note: "Altitude + SNF. Road legs fade late." },
   { id: "stafford", gameId: "lar-den", name: "Matthew Stafford", team: "LAR", pos: "QB", status: "questionable", pts: -3.4, passMult: -0.15, note: "Back. Visitor at altitude is already taxed." },
   { id: "mahomes-og", gameId: "kc-mia", name: "Trey Smith", team: "KC", pos: "OT", status: "active", pts: -1.1, sackMult: 0.1, note: "Interior. Mahomes without a clean pocket in Miami." },
   { id: "cmc", gameId: "ari-sf", name: "Christian McCaffrey", team: "SF", pos: "RB", status: "questionable", pts: -2.2, note: "Calf. 49ers script without him is a different total." },

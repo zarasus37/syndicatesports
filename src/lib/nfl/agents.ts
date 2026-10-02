@@ -55,10 +55,10 @@ export const AGENT_CATALOG: AgentCatalog[] = [
   {
     id: "montecarlo",
     name: "Monte Carlo",
-    role: "12k–80k game paths. Chaos, tails, variance inflation.",
+    role: "12k–80k game paths. Tails, variance inflation.",
     group: "price",
     capabilities: [
-      "Independent paths per game; Q4 chaos on Denver profiles",
+      "Independent paths per game; body and fourth quarter split off a single league variance",
       "Stress: steam, public surge, starter out, wind",
       "Tail mass on ±7; mean-shift 0.4 of unexplained steam",
     ],
@@ -168,7 +168,7 @@ export function deriveAgents(results: GameSimResult[]): AgentStatus[] {
   // highest-EV candidate regardless of whether it clears the MIN_EV floor or
   // sizes at zero, so counting `r.pick.ev` overstates the card.
   const plus = results.filter((r) => bestTake(r) !== null);
-  const chaos = results.filter((r) => r.chaosTriggers > 0.08);
+  const wideVol = results.filter((r) => r.stdMargin >= 16);
   const steam = results.filter((r) => r.steam !== "stable");
   const fades = results.filter((r) => {
     const g = getGame(r.gameId);
@@ -192,7 +192,7 @@ export function deriveAgents(results: GameSimResult[]): AgentStatus[] {
         state: crit ? "flag" : flagged.length ? "flag" : "ok",
       };
     if (m.id === "montecarlo")
-      return { ...base, last: `${paths.toLocaleString()} paths`, state: chaos.length ? "flag" : "ok" };
+      return { ...base, last: `${paths.toLocaleString()} paths`, state: wideVol.length ? "flag" : "ok" };
     if (m.id === "ev")
       return {
         ...base,
@@ -280,12 +280,12 @@ export function briefAgent(id: AgentId, ctx: AgentContext): AgentBrief {
   }
   if (id === "montecarlo") {
     const paths = results.reduce((s, r) => s + r.sims, 0);
-    const chaos = results.filter((r) => r.chaosTriggers > 0.05);
+    const wide = results.filter((r) => r.stdMargin >= 16);
     return {
       id,
       facts: [
         { k: "Paths", v: paths ? paths.toLocaleString() : String(sims) },
-        { k: "Chaos games", v: String(chaos.length), tone: chaos.length ? "warn" : undefined },
+        { k: "Wide-vol games", v: String(wide.length), tone: wide.length ? "warn" : undefined },
         { k: "Latency", v: lastRunMs ? `${lastRunMs} ms` : "—" },
       ],
       items: [...results]

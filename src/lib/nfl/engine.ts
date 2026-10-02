@@ -5,7 +5,7 @@ import { evFromProb, impliedProb, kellyFraction } from "./odds";
 import { outAdjustments } from "./outs";
 import { getPriors } from "./priors";
 import { calibrateProb } from "./reliability";
-import { gaussian, poisson, choice, mulberry32, type Rng } from "./rng";
+import { gaussian, poisson, mulberry32 } from "./rng";
 import { buildFeatures, scoreAnomaly, steamSignal } from "./flags";
 import { analyzeSharp } from "./sharp";
 import { BASE_STD, BODY_SD, KEY_NUMBERS, Q4_SD } from "./config";
@@ -13,7 +13,6 @@ import { getGame } from "./slate";
 import { clvPts } from "./tape";
 import { TEAMS } from "./teams";
 import type {
-  ChaosMode,
   GameSimResult,
   NflGame,
   PathSample,
@@ -28,35 +27,8 @@ const BINS_FROM = -36;
 const BINS_TO = 36;
 const BIN_W = 2;
 
-function rating(abbr: TeamAbbr): number {
-  return TEAMS[abbr]?.ratingZ ?? 0;
-}
-
 function variance(abbr: TeamAbbr): number {
   return TEAMS[abbr]?.variance ?? 1;
-}
-
-export function checkChaos(team: TeamAbbr, opponent: TeamAbbr, quarter: number, margin: number): ChaosMode {
-  if (team === "DEN" && quarter === 4 && margin <= -14) return "GIANTS_MODE";
-  if (team === "DEN" && (opponent === "KC" || opponent === "BUF" || opponent === "BAL")) return "CLUTCH_LUCK_MODE";
-  const gap = rating(opponent) - rating(team);
-  if (team === "DEN" && gap >= 0.6) return "CLUTCH_LUCK_MODE";
-  return "NORMAL";
-}
-
-export function matchupChaos(game: NflGame): ChaosMode {
-  if (game.home !== "DEN" && game.away !== "DEN") return "NORMAL";
-  const opp = game.home === "DEN" ? game.away : game.home;
-  return checkChaos("DEN", opp, 1, 0);
-}
-
-export function applyChaos(rng: Rng, mode: ChaosMode, base: number): { score: number; triggered: boolean } {
-  if (mode === "GIANTS_MODE" && rng() < 0.3) return { score: base + 21, triggered: true };
-  if (mode === "CLUTCH_LUCK_MODE") {
-    const extra = choice(rng, [0, 3, 7], [0.7, 0.2, 0.1]);
-    return { score: base + extra, triggered: extra > 0 };
-  }
-  return { score: base, triggered: false };
 }
 
 function histogram(margins: number[]): { bin: number; p: number }[] {
@@ -152,7 +124,6 @@ export function simulateGame(
   game: NflGame,
   nSims = 8000,
   seed = 20260921,
-  chaos = true,
   opts?: { outIds?: string[] },
 ): GameSimResult {
   const rng = mulberry32(seed + hashId(game.id));
@@ -184,8 +155,7 @@ export function simulateGame(
   let hMean = marketH + cond.homePts + outs.homePts;
   let aMean = marketA + cond.awayPts + outs.awayPts;
 
-  const chaosProfile = matchupChaos(game);
-  const fs = buildFeatures(game, { chaos: chaos && chaosProfile !== "NORMAL" });
+  const fs = buildFeatures(game);
   const anomaly = scoreAnomaly(fs);
   const steam = steamSignal(game);
 
@@ -218,7 +188,6 @@ export function simulateGame(
   const totals: number[] = new Array(nSims);
   const homes: number[] = new Array(nSims);
   const aways: number[] = new Array(nSims);
-  let chaosTriggers = 0;
   let homeWin = 0;
   let homeCover = 0;
   let coverPush = 0;
@@ -235,27 +204,26 @@ export function simulateGame(
     // Body carries BODY_VAR_SHARE of BASE_STD, fourth quarter the remainder.
     // BODY_SD/Q4_SD are per-team, so the realised margin SD squares back to
     // `vol` instead of overshooting it.
+    //
+    // There is no per-team personality branch here, and there used to be one.
+    // The old "Denver chaos engine" fired GIANTS_MODE (+21 points at p=0.30) and
+    // CLUTCH_LUCK_MODE (+3/+7) on hardcoded team and opponent ids, then added
+    // a further +3 to either side in any two-point game. Measured, it moved
+    // cover probability 5.1 points on 30% of paths for one franchise and had no
+    // evidential basis — it was a narrative about a coach encoded as a random
+    // draw. Late-game variance now has to come from the distribution inputs
+    // (team `variance`, condition volMult, anomaly inflation), not from a
+    // personality toggle.
     const hScore = gaussian(rng, hMean * 0.75, bodySd);
     const aScore = gaussian(rng, aMean * 0.75, bodySd);
-    const currentMargin = hScore - aScore;
-    const hMode = chaos ? checkChaos(game.home, game.away, 4, currentMargin) : "NORMAL";
-    const aMode = chaos ? checkChaos(game.away, game.home, 4, -currentMargin) : "NORMAL";
-    const hQ4 = applyChaos(rng, hMode, gaussian(rng, hMean * 0.25, q4Sd));
-    const aQ4 = applyChaos(rng, aMode, gaussian(rng, aMean * 0.25, q4Sd));
-    if (hQ4.triggered || aQ4.triggered) chaosTriggers += 1;
+    const hQ4 = gaussian(rng, hMean * 0.25, q4Sd);
+    const aQ4 = gaussian(rng, aMean * 0.25, q4Sd);
 
-    let finalH = Math.max(0, hScore + hQ4.score);
-    let finalA = Math.max(0, aScore + aQ4.score);
+    const finalH = hScore + hQ4;
+    const finalA = aScore + aQ4;
 
-    if (chaos && Math.abs(finalH - finalA) <= 2) {
-      const p = 0.6 * getPriors().haircuts.chaos;
-      if (game.home === "DEN" && rng() < p) finalH += 3;
-      if (game.away === "DEN" && rng() < p) finalA += 3;
-    }
-
-    // No tail-amplification step. Margin spread comes from the normal draws and
-    // the chaos branch above only; a fatter tail has to be earned by variance
-    // inputs (team `variance`, condition volMult, anomaly inflation).
+    // No tail-amplification step. Margin spread comes from the normal draws
+    // alone; a fatter tail has to be earned by variance inputs.
     //
     // Flooring at zero truncates the left tail of a team modelled near ~17
     // points, which lifts the mean score a little — measured at +0.145 on the
@@ -348,7 +316,6 @@ export function simulateGame(
     awayWinBy7: awayWinBy7 / n,
     land3: land3 / n,
     land7: land7 / n,
-    chaosTriggers: chaosTriggers / n,
     histogram: histogram(margins),
     pick,
     alts,
@@ -364,8 +331,6 @@ export function simulateGame(
     outsApplied: outs.applied,
     rankScore: rankScore(pick.ev, pick.line, pick.market, call),
     clvPts: clvPts(game, pickingHome, pick.market, pick.side),
-    chaosOn: chaos,
-    chaosProfile,
   };
 }
 
@@ -375,13 +340,12 @@ export function simulateProp(prop: PropLine, n = 5000, seed = 20260921): PropSim
   const wx = game ? adjustPropMean(prop, game) : { mean: prop.mean, note: null };
   const samples = new Array<number>(n);
   for (let i = 0; i < n; i++) {
-    if (prop.dist === "poisson") {
-      samples[i] = poisson(rng, wx.mean);
-    } else {
-      const chaos = Boolean(prop.chaosLift) && rng() < 0.35;
-      const mu = chaos ? wx.mean + (prop.chaosLift ?? 0) : wx.mean;
-      samples[i] = gaussian(rng, mu, prop.sd ?? 35);
-    }
+    // The old prop path carried a `chaosLift` that added a flat bonus to the
+    // mean on 35% of draws. Its only instance was Denver's Bo Nix (+48 yards),
+    // so it was the same unvalidated narrative as the game-level chaos engine
+    // in a different place. The mean now comes from the prop line plus the
+    // weather/altitude factor and nothing else.
+    samples[i] = prop.dist === "poisson" ? poisson(rng, wx.mean) : gaussian(rng, wx.mean, prop.sd ?? 35);
   }
   samples.sort((a, b) => a - b);
   const mu = mean(samples);

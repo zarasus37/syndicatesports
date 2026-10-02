@@ -28,7 +28,7 @@ export const MISS_CLASS_META: Record<MissClass, { label: string; detail: string 
   },
   "over-weighted-context": {
     label: "Over-weighted context",
-    detail: "Weather, crew, slot, or chaos was asked to do more work than the result supported.",
+    detail: "Weather, crew, slot, or outs were asked to do more work than the result supported.",
   },
   "misread-market": {
     label: "Misread market",
@@ -59,7 +59,6 @@ const REASON_CLASS: Record<string, MissClass> = {
   "one-leg": "variance",
   "line-moved-against": "stale-pricing",
   "weather-miss": "over-weighted-context",
-  "chaos-miss": "over-weighted-context",
   "ref-conflict": "over-weighted-context",
   "public-was-right": "misread-market",
   "handle-led-steam": "misread-market",
@@ -72,7 +71,6 @@ const FAILED_COPY: Record<string, string> = {
   "line-moved-against": "Stored number was already behind the tape.",
   "model-soft": "The number was too ambitious versus the final margin.",
   "weather-miss": "Weather tax was weighted above what the player actually did.",
-  "chaos-miss": "Chaos paths were in the sim and not in the game.",
   "ref-conflict": "Crew lean was weighted over the slot. The slot won.",
   "handle-led-steam": "Treated square steam — handle and the number together — as a sharp move.",
   juice: "After juice this was a coin flip. Variance, not a broken feature.",
@@ -117,13 +115,7 @@ const TAG_FACTOR: Record<string, Omit<FactorRow, "read"> & { read: string }> = {
     signal: "Home overlay",
     role: "forecast",
     weight: "annotation",
-    read: "Home rating residual, shrunk toward the market.",
-  },
-  chaos: {
-    signal: "Chaos",
-    role: "context",
-    weight: "material",
-    read: "Late-game script was on. Context, not a stand-alone edge.",
+    read: "Home-field context. The line already carries most of it.",
   },
   tnf: {
     signal: "Thursday slot",
@@ -175,7 +167,6 @@ const TAG_HAIRCUT: Record<string, HaircutKey> = {
   rlm: "rlm",
   steam: "steam",
   tnf: "tnf",
-  chaos: "chaos",
   wind: "wind",
   "whistle-over": "refOver",
   "public-fade": "publicFade",
@@ -191,7 +182,6 @@ const HELD_REASON: Record<string, string> = {
   "home-script": "Home overlay agreed with the result.",
   "ref-scripted": "Crew tendency showed up in the box score.",
   "weather-hit": "Weather overlay showed up in the box score.",
-  "chaos-hit": "Late-game script showed up on the field.",
   "tnf-total": "Thursday total lean agreed with the score.",
 };
 

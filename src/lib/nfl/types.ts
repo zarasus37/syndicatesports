@@ -36,7 +36,6 @@ export type MarketKind = "spread" | "total" | "ml";
 export type SteamSignal = "stable" | "steam" | "rlm";
 export type AnomalyState = "normal" | "info" | "outlier" | "critical";
 export type SharpGrade = "none" | "watch" | "sharp" | "heavy";
-export type ChaosMode = "NORMAL" | "GIANTS_MODE" | "CLUTCH_LUCK_MODE";
 export type AgentId =
   | "ingestion"
   | "signals"
@@ -183,7 +182,6 @@ export interface FeatureSnapshot {
   outlierDev: number;
   totalMove: number;
   sideFlip: boolean;
-  chaosGame: boolean;
   ticketsHome: number;
   handleHome: number;
   publicFade: boolean;
@@ -283,7 +281,6 @@ export interface GameSimResult {
   awayWinBy7: number;
   land3: number;
   land7: number;
-  chaosTriggers: number;
   histogram: { bin: number; p: number }[];
   pick: SimPick;
   alts: SimPick[];
@@ -299,8 +296,6 @@ export interface GameSimResult {
   outsApplied: string[];
   rankScore: number;
   clvPts: number;
-  chaosOn: boolean;
-  chaosProfile: ChaosMode;
 }
 
 export interface PropLine {
@@ -315,7 +310,6 @@ export interface PropLine {
   dist: "normal" | "poisson";
   mean: number;
   sd?: number;
-  chaosLift?: number;
 }
 
 export interface PropSim {

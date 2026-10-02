@@ -55,10 +55,7 @@ export function steamSignal(game: NflGame): {
   return { steam: "steam", dir: towardHome === homeIsFav ? "favorite" : "underdog", pts };
 }
 
-export function buildFeatures(
-  game: NflGame,
-  opts: { chaos?: boolean } = {},
-): FeatureSnapshot {
+export function buildFeatures(game: NflGame): FeatureSnapshot {
   const marketMargin = -game.line.spread;
   const cond = conditionAdjustments(game);
   const outs = outAdjustments(game);
@@ -111,7 +108,6 @@ export function buildFeatures(
     outlierDev: absMove,
     totalMove: tot,
     sideFlip: sideFlipped(game),
-    chaosGame: Boolean(opts.chaos) && (game.home === "DEN" || game.away === "DEN"),
     ticketsHome: pub.ticketsHome,
     handleHome: pub.handleHome,
     publicFade: pub.fade !== null,
@@ -139,7 +135,6 @@ export function scoreAnomaly(fs: FeatureSnapshot): AnomalyScore {
   add("weather stress", w.weather * Math.min(1, fs.weatherStress / 0.6), fs.weatherStress >= 0.35);
   add("side reverse", fs.sideFlip ? 16 : 0, fs.sideFlip);
   add("total steam", 8 * Math.min(1, Math.abs(fs.totalMove) / 2.5), Math.abs(fs.totalMove) >= 2);
-  add("chaos profile", fs.chaosGame ? 8 : 0, fs.chaosGame);
   add("public fade", fs.publicFade ? 8 : 0, fs.publicFade);
 
   const score = Math.max(0, Math.min(100, raw));

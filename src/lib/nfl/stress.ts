@@ -109,12 +109,11 @@ export function stressGame(
   kind: ShockKind,
   sims: number,
   seed: number,
-  chaos: boolean,
 ): StressReport {
   const n = Math.max(4000, Math.min(sims, 12000));
   const shocked = applyShock(game, kind);
-  const before = simulateGame(game, n, seed, chaos);
-  const after = simulateGame(shocked.game, n, seed + 17, chaos, { outIds: shocked.outIds });
+  const before = simulateGame(game, n, seed);
+  const after = simulateGame(shocked.game, n, seed + 17, { outIds: shocked.outIds });
   return {
     kind,
     gameId: game.id,

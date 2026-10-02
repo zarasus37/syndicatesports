@@ -20,7 +20,6 @@ export function GameRow({ result, rank, onCard }: { result: GameSimResult; rank:
   const ev = result.pick.ev;
   const bet = bestTake(result);
   const plus = onCard ?? Boolean(bet);
-  const den = game.home === "DEN" || game.away === "DEN";
   const pub = publicRead(game);
   const sharp = result.sharp;
   const slot = gameSlot(game);
@@ -61,7 +60,6 @@ export function GameRow({ result, rank, onCard }: { result: GameSimResult; rank:
             ) : result.anomaly.state !== "normal" ? (
               <Badge variant={flagTone(result.anomaly.state)}>{result.anomaly.state}</Badge>
             ) : null}
-            {den ? <Badge variant="outline">chaos</Badge> : null}
             {isPrime(slot) ? <Badge variant="outline">{slot.toUpperCase()}</Badge> : null}
             {slot === "intl" ? <Badge variant="outline">intl</Badge> : null}
             {wind ? <Badge variant="outline">wind {game.weather.windMph}</Badge> : null}

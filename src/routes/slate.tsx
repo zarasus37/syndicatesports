@@ -220,7 +220,7 @@ function Home() {
       {featured.length > 0 && lastRunAt ? (
         <section className="space-y-2">
           <h2 className="text-sm font-medium">Watch list</h2>
-          <p className="text-sm text-muted-foreground">Prime / chaos / featured kickoffs. Still a pass unless it is on the card.</p>
+          <p className="text-sm text-muted-foreground">Prime / featured kickoffs. Still a pass unless it is on the card.</p>
           <div className="grid gap-2 sm:grid-cols-3">
             {featured.map((g) => {
               const r = results[g.id];
@@ -238,9 +238,7 @@ function Home() {
                     <span className="text-sm font-medium">
                       {away.abbr} @ {home.abbr}
                     </span>
-                    {g.id === "lar-den" ? (
-                      <Badge variant="warn">chaos</Badge>
-                    ) : r.steam !== "stable" ? (
+                    {r.steam !== "stable" ? (
                       <Badge variant={r.steam === "rlm" ? "loss" : "warn"}>{r.steam}</Badge>
                     ) : r.anomaly.state !== "normal" ? (
                       <Badge variant="warn">{r.anomaly.state}</Badge>
@@ -263,7 +261,7 @@ function Home() {
         <section className="space-y-2">
           <h2 className="text-sm font-medium">Simulation variance since prior run</h2>
           <p className="text-sm text-muted-foreground">
-            Same seeded inputs. Output moved because of a new sim seed, path count, or chaos setting — not a live market move.
+            Same seeded inputs. Output moved because of a new sim seed, or path count — not a live market move.
           </p>
           {(() => {
             const deltas = diffSnapshots(snaps[1], snaps[0]!);

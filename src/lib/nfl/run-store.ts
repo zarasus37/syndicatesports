@@ -17,7 +17,6 @@ export interface PersistedRun {
   phase: RunPhase;
   seed: number;
   sims: number;
-  chaos: boolean;
   bankroll: number;
   modelVersion: string;
   dataMode: DataMode;
@@ -67,7 +66,6 @@ function metaOf(run: PersistedRun) {
     phase: run.phase,
     seed: run.seed,
     sims: run.sims,
-    chaos: run.chaos,
     bankroll: run.bankroll,
     modelVersion: run.modelVersion,
     dataMode: run.dataMode,

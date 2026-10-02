@@ -24,7 +24,6 @@ export function StressLab({ initialGameId }: { initialGameId?: string }) {
     }
   }, [initialGameId]);
   const sims = useDesk((s) => s.sims) ?? 12000;
-  const chaos = useDesk((s) => s.chaos) ?? true;
   const seed = useDesk((s) => s.seed) ?? 20260921;
   const game = useMemo(() => slateGames.find((g) => g.id === gameId) ?? featured, [gameId, featured, slateGames]);
 
@@ -32,7 +31,7 @@ export function StressLab({ initialGameId }: { initialGameId?: string }) {
     setBusy(true);
     setSlot(target);
     window.setTimeout(() => {
-      const next = stressGame(game, kind, sims, seed, chaos);
+      const next = stressGame(game, kind, sims, seed);
       if (target === "left") setLeft(next);
       else setRight(next);
       setBusy(false);

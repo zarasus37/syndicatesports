@@ -13,7 +13,6 @@ export interface LearnedPriors {
     rlm: number;
     steam: number;
     tnf: number;
-    chaos: number;
     wind: number;
     refOver: number;
     publicFade: number;
@@ -33,7 +32,7 @@ export const DEFAULT_PRIORS: LearnedPriors = {
   brier: 0.25,
   clv: 0,
   roi: 0,
-  haircuts: { rlm: 1, steam: 1, tnf: 1, chaos: 1, wind: 1, refOver: 1, publicFade: 1 },
+  haircuts: { rlm: 1, steam: 1, tnf: 1, wind: 1, refOver: 1, publicFade: 1 },
   posts: {},
   clvPost: clvUpdate([]),
   missPost: [],

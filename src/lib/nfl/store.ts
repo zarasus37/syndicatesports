@@ -34,7 +34,6 @@ interface DeskState {
   hydrated: boolean;
   running: boolean;
   sims: number;
-  chaos: boolean;
   bankroll: number;
   seed: number;
   results: Record<string, GameSimResult>;
@@ -66,7 +65,6 @@ interface DeskState {
   snaps: SlateSnapshot[];
   hydrate: () => void;
   setSims: (n: number) => void;
-  setChaos: (v: boolean) => void;
   setBankroll: (n: number) => void;
   run: (opts?: { sims?: number }) => void | Promise<void>;
   paperGame: (gameId: string) => boolean;
@@ -126,9 +124,9 @@ function saveTickets(tickets: PaperTicket[]) {
   }
 }
 
-function runSlate(seed: number, sims: number, chaos: boolean) {
+function runSlate(seed: number, sims: number) {
   const games = activeGames();
-  const slate = games.map((g) => simulateGame(g, sims, seed, chaos));
+  const slate = games.map((g) => simulateGame(g, sims, seed));
   const results: Record<string, GameSimResult> = {};
   for (const r of slate) results[r.gameId] = r;
   const order = [...slate].sort((a, b) => b.rankScore - a.rankScore).map((r) => r.gameId);
@@ -143,7 +141,6 @@ export const useDesk = create<DeskState>()((set, get) => ({
   hydrated: false,
   running: false,
   sims: DEFAULT_SIMS,
-  chaos: true,
   bankroll: DEFAULT_BANKROLL,
   seed: 20260921,
   results: {},
@@ -225,7 +222,6 @@ export const useDesk = create<DeskState>()((set, get) => ({
             agents: saved.results ? deriveAgents(Object.values(saved.results)) : [],
             seed: saved.seed,
             sims: saved.sims,
-            chaos: saved.chaos,
             bankroll: saved.bankroll ?? get().bankroll,
           }
         : current
@@ -235,10 +231,6 @@ export const useDesk = create<DeskState>()((set, get) => ({
     if (!lockedLive && !liveSheet && typeof window !== "undefined") get().run();
   },
   setSims: (n) => set({ sims: n }),
-  setChaos: (v) => {
-    set({ chaos: v });
-    if (typeof window !== "undefined") queueMicrotask(() => get().run());
-  },
   setBankroll: (n) => set({ bankroll: Math.max(100, n) }),
   run: async (opts) => {
     if (typeof window === "undefined") return;
@@ -296,7 +288,7 @@ export const useDesk = create<DeskState>()((set, get) => ({
     }
     const seed = (get().seed + 97) >>> 0;
     const t0 = performance.now();
-    const out = runSlate(seed, sims, get().chaos);
+    const out = runSlate(seed, sims);
     const games = out.games;
     const live = liveTrueCard(Object.values(out.results), out.parlays, out.props, games);
     const at = Date.now();
@@ -333,7 +325,7 @@ export const useDesk = create<DeskState>()((set, get) => ({
       });
     }
     const predictions = applyNamedPicks([...priorByGame.values()], freshPreds) as unknown as WinnerPick[];
-    const snap = snapshotFrom(Object.values(out.results), new Set(live.takes.map((t) => t.gameId)), seed, sims, get().chaos);
+    const snap = snapshotFrom(Object.values(out.results), new Set(live.takes.map((t) => t.gameId)), seed, sims);
     const snaps = pushSnap(get().snaps, snap);
     const reason = plays.length === 0 ? "NO_QUALIFYING_EDGES" : "ok";
     const journal = appendJournal(get().journal, {
@@ -359,7 +351,6 @@ export const useDesk = create<DeskState>()((set, get) => ({
       phase: "priced",
       seed,
       sims,
-      chaos: get().chaos,
       bankroll: get().bankroll,
       modelVersion: MODEL_VERSION,
       dataMode,
@@ -653,7 +644,7 @@ export const useDesk = create<DeskState>()((set, get) => ({
     const game = gameId ? getGame(gameId) : undefined;
     if (!game || !get().lastRunAt || typeof window === "undefined") return;
     window.setTimeout(() => {
-      const r = simulateGame(game, get().sims, get().seed, get().chaos);
+      const r = simulateGame(game, get().sims, get().seed);
       const results = { ...get().results, [game.id]: r };
       const slate = Object.values(results);
       const order = [...slate].sort((a, b) => b.rankScore - a.rankScore).map((x) => x.gameId);

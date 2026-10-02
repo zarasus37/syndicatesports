@@ -1,9 +1,39 @@
+import { impliedProb, probToAmerican } from "./odds";
 import type { NflGame, PropLine } from "./types";
 
 export const SEASON = 2026;
 export const SEEDED_WEEK = 3;
 export let WEEK = SEEDED_WEEK;
 export let SLATE_LABEL = "Week 3 · 2026";
+
+/** Standard two-way book margin used to pair a spread's two sides. */
+const BOOK_MARGIN = 0.035;
+
+/**
+ * Derive the opposite side's price from the quoted one.
+ *
+ * The engine grades both sides of a spread, and it used to fall back to the
+ * home price whenever `awaySpreadPrice` was missing — which it always was for
+ * this seeded slate. That priced both sides identically while the model
+ * assigned them different probabilities, so the underdog side carried a large
+ * phantom negative EV (around -8% at -107) that had nothing to do with the
+ * model. It dragged every aggregate EV figure on the desk downward.
+ *
+ * Live ingestion quotes both sides itself, which is why this only bit in
+ * seeded/demo mode. Deriving the pair here keeps the seeded market internally
+ * coherent: the two implied probabilities sum to 1 + margin, exactly as a real
+ * two-way spread does.
+ */
+export function pairedPrice(price: number, margin = BOOK_MARGIN): number {
+  const other = 1 + margin - impliedProb(price);
+  if (other <= 0.02 || other >= 0.98) return price;
+  return probToAmerican(other);
+}
+
+/** Attach the missing away-side price to a seeded line. */
+export function withAwayPrice(l: NflGame["line"]): NflGame["line"] {
+  return { ...l, awaySpreadPrice: l.awaySpreadPrice ?? pairedPrice(l.spreadPrice) };
+}
 
 export const GAMES: NflGame[] = [
   {
@@ -215,7 +245,7 @@ export const GAMES: NflGame[] = [
     line: { spread: 2.5, spreadOpen: 4.0, spreadPrice: -113, total: 45.5, totalOpen: 46.5, overPrice: -110, underPrice: -110, homeMl: 112, awayMl: -132 },
     public: { ticketsHome: 29, handleHome: 48, ticketsOver: 52, handleOver: 50 },
     weather: { venue: "Empower Field", city: "Denver", roof: "open", tempF: 62, windMph: 9, note: "Altitude, thin air" },
-    notes: ["Chaos game. Public on the Rams, number coming back to Denver", "Broncos at home vs a superior Rams side"],
+    notes: ["Public on the Rams, number coming back to Denver", "Broncos at home vs a superior Rams side"],
     featured: true,
   },
   {
@@ -235,10 +265,13 @@ export const GAMES: NflGame[] = [
   },
 ];
 
-export const SLATE = GAMES;
+/** Seeded games carry a complete two-way line — see `withAwayPrice`. */
+export const GAMES_WITH_LINES: NflGame[] = GAMES.map((g) => ({ ...g, line: withAwayPrice(g.line) }));
+
+export const SLATE = GAMES_WITH_LINES;
 
 export const PROPS: PropLine[] = [
-  { id: "nix-yds", gameId: "lar-den", player: "Bo Nix", team: "DEN", market: "Pass yds", line: 225.5, overPrice: -115, underPrice: -105, dist: "normal", mean: 228, sd: 42, chaosLift: 48 },
+  { id: "nix-yds", gameId: "lar-den", player: "Bo Nix", team: "DEN", market: "Pass yds", line: 225.5, overPrice: -115, underPrice: -105, dist: "normal", mean: 228, sd: 42 },
   { id: "den-sacks", gameId: "lar-den", player: "Broncos D", team: "DEN", market: "Team sacks", line: 2.5, overPrice: -110, underPrice: -110, dist: "poisson", mean: 3.1 },
   { id: "stafford-yds", gameId: "lar-den", player: "Matthew Stafford", team: "LAR", market: "Pass yds", line: 248.5, overPrice: -112, underPrice: -108, dist: "normal", mean: 246, sd: 38 },
   { id: "allen-yds", gameId: "lac-buf", player: "Josh Allen", team: "BUF", market: "Pass yds", line: 262.5, overPrice: -110, underPrice: -110, dist: "normal", mean: 268, sd: 40 },
@@ -272,12 +305,12 @@ export function installLiveGames(games: NflGame[], opts?: { replace?: boolean })
 }
 
 export function activeGames(): NflGame[] {
-  const base = replacement?.length ? replacement : GAMES;
+  const base = replacement?.length ? replacement : GAMES_WITH_LINES;
   return base.map((g) => liveById.get(g.id) ?? g);
 }
 
 export function gameById(id: string): NflGame | undefined {
-  return liveById.get(id) ?? replacement?.find((g) => g.id === id) ?? GAMES.find((g) => g.id === id);
+  return liveById.get(id) ?? replacement?.find((g) => g.id === id) ?? GAMES_WITH_LINES.find((g) => g.id === id);
 }
 
 export function getGame(id: string): NflGame | undefined {

@@ -11,7 +11,7 @@ import { RefPanel } from "@/components/desk/ref-panel";
 import { SharpPanel } from "@/components/desk/sharp-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MIN_EV } from "@/lib/nfl/config";
+import { BASE_STD, MIN_EV } from "@/lib/nfl/config";
 import { bestTake } from "@/lib/nfl/card";
 import { paperStake } from "@/lib/nfl/execution";
 import { pickLabel } from "@/lib/nfl/labels";
@@ -32,7 +32,6 @@ function GamePage() {
   const result = useDesk((s) => s.results?.[gameId]);
   const bankroll = useDesk((s) => s.bankroll) ?? 10000;
   const run = useDesk((s) => s.run);
-  const chaos = useDesk((s) => s.chaos);
   const paperGame = useDesk((s) => s.paperGame);
   const tickets = useDesk((s) => s.tickets) ?? [];
   const plays = useDesk((s) => s.plays) ?? [];
@@ -55,7 +54,6 @@ function GamePage() {
   const home = team(game.home);
   const bet = result ? bestTake(result) : null;
   const stake = result && bet ? paperStake(bet.kelly, bet.ev, bankroll) : 0;
-  const denGame = game.home === "DEN" || game.away === "DEN";
   const pub = publicRead(game);
   const sharp = result?.sharp ?? analyzeSharp(game);
   const cond = conditionAdjustments(game);
@@ -92,7 +90,6 @@ function GamePage() {
               {ref.totalLean !== "even" ? ` ${ref.totalLean}` : ""}
             </Badge>
           ) : null}
-          {denGame ? <Badge variant="warn">chaos engine</Badge> : null}
           {result?.steam && result.steam !== "stable" ? (
             <Badge variant={result.steam === "rlm" ? "loss" : "warn"}>
               {result.steam} {formatSigned(result.steamPts)}
@@ -203,14 +200,12 @@ function GamePage() {
               <Mini k="One-score" v={formatPct(result.oneScore)} />
               <Mini k={`${home.abbr} by 7+`} v={formatPct(result.homeWinBy7)} />
               <Mini k={`${away.abbr} by 7+`} v={formatPct(result.awayWinBy7)} />
-              <Mini k="Chaos triggers" v={chaos ? formatPct(result.chaosTriggers) : "off"} />
+              <Mini k="Margin SD" v={result.stdMargin.toFixed(1)} />
             </div>
-            {denGame && chaos ? (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Profile {result.chaosProfile.replace(/_/g, " ")}. Giants mode fires if Denver trails by 14+ in
-                Q4 (30% chance of a 21-point burst). Clutch luck adds 0 / 3 / 7 in one-score games.
-              </p>
-            ) : null}
+            <p className="mt-4 text-sm text-muted-foreground">
+              Paths come from one league variance ({BASE_STD}pt) split across body and fourth quarter, scaled by
+              team variance, conditions and anomaly inflation. No per-team personality branch.
+            </p>
           </section>
 
           <section className="rounded-xl border border-border bg-card p-4 sm:p-5">

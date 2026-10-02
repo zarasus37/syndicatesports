@@ -19,13 +19,11 @@ export const REASON_COPY: Record<string, string> = {
   "home-script": "Home overlay and the result lined up.",
   "ref-scripted": "Crew tendency printed. Total/sacks followed the whistle.",
   "weather-hit": "Wind/heat/altitude showed up in the box score.",
-  "chaos-hit": "Denver late-game script paid.",
   "key-number": "Lost on 3. Model was close; the key was not.",
   "public-was-right": "Faded 65%+ tickets and they cashed. Fade needs handle, not just tickets.",
   "handle-led-steam": "Handle and the number were together. We treated it like square steam.",
   "tnf-total": "Thursday Night unders beat the whistle-over lean.",
   "ref-conflict": "Crew said over, slot said under. Slot won.",
-  "chaos-miss": "Chaos engine fired in the sim, not on the field.",
   "line-moved-against": "Negative CLV. We were behind the tape.",
   juice: "Coin-flip after juice. Variance, not a broken feature.",
   "model-soft": "Side was fine; the number was too ambitious.",
@@ -213,7 +211,7 @@ export function segmentBook(rows: LedgerTicket[]) {
   return kinds.map((kind) => ({ kind, ...cardUnits(rows.filter((t) => t.kind === kind)) }));
 }
 
-const ENGINE_TAGS = ["rlm", "steam", "tnf", "chaos", "wind", "whistle-over", "public-fade"] as const;
+const ENGINE_TAGS = ["rlm", "steam", "tnf", "wind", "whistle-over", "public-fade"] as const;
 
 export function learnFrom(rows: LedgerTicket[]): LearnedPriors {
   const cal = calibrate(rows);
@@ -236,7 +234,6 @@ export function learnFrom(rows: LedgerTicket[]): LearnedPriors {
   const rlm = h("rlm");
   const steam = h("steam");
   const tnf = h("tnf");
-  const chaos = h("chaos");
   const wind = h("wind");
   const refOver = h("whistle-over");
   const publicFade = h("public-fade");
@@ -245,9 +242,6 @@ export function learnFrom(rows: LedgerTicket[]): LearnedPriors {
   if (rlm > 1.05) notes.push("RLM posterior clears the prior. Keep following the number against tickets.");
   if (steam > 1.05) notes.push("Steam posterior is strong. Handle-led moves stay in the model.");
   if (refOver < 0.95) notes.push("Whistle-over crews: posterior pulled down when slot/weather fought the flag.");
-  if (chaos !== 1 && Math.abs(chaos - 1) >= 0.04) {
-    notes.push(chaos < 1 ? "Chaos posterior is soft. Do not upsize Denver." : "Chaos paid. Leave the engine on.");
-  }
   if (clvPost.q10 > 0) notes.push("Recorded open-CLV posterior 10th percentile is still positive. That is the open on the ticket, not a close.");
   else if (clvPost.q90 < 0) notes.push("Recorded open-CLV posterior is negative. Cards were behind the open they stored.");
   if (!notes.length) notes.push("Posteriors hug the prior. κ = 10 is doing the work — small samples don't yank the engine.");
@@ -264,7 +258,7 @@ export function learnFrom(rows: LedgerTicket[]): LearnedPriors {
     brier: cal.brier,
     clv: cal.clv,
     roi: cal.roi,
-    haircuts: { rlm, steam, tnf, chaos, wind, refOver, publicFade },
+    haircuts: { rlm, steam, tnf, wind, refOver, publicFade },
     posts,
     clvPost,
     missPost,
@@ -301,7 +295,6 @@ export function cardFromRun(
     if (r.steam === "steam") tags.push("steam");
     if (r.sharp?.grade === "sharp" || r.sharp?.grade === "heavy") tags.push("sharp");
     if (g.network === "Prime") tags.push("tnf");
-    if (g.home === "DEN" || g.away === "DEN") tags.push("chaos");
     if ((g.weather.windMph ?? 0) >= 12) tags.push("wind");
     rows.push({
       id: `w${week}-${r.gameId}-${bet.market}`,

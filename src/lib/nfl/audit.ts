@@ -51,7 +51,6 @@ export interface SlateSnapshot {
   at: number;
   seed: number;
   sims: number;
-  chaos: boolean;
   modelVersion: string;
   games: SlateSnapGame[];
 }
@@ -66,12 +65,11 @@ export interface SnapDelta {
   takeTo: boolean;
 }
 
-export function snapshotFrom(results: GameSimResult[], takes: Set<string>, seed: number, sims: number, chaos: boolean): SlateSnapshot {
+export function snapshotFrom(results: GameSimResult[], takes: Set<string>, seed: number, sims: number): SlateSnapshot {
   return {
     at: Date.now(),
     seed,
     sims,
-    chaos,
     modelVersion: MODEL_VERSION,
     games: results.map((r) => ({
       id: r.gameId,

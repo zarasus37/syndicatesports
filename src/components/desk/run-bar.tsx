@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { DEFAULT_SIMS, MAX_SIMS } from "@/lib/nfl/config";
 import { useDesk } from "@/lib/nfl/store";
 
@@ -9,11 +8,9 @@ export function RunBar() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const sims = useDesk((s) => s.sims) ?? DEFAULT_SIMS;
-  const chaos = useDesk((s) => s.chaos) ?? true;
   const running = useDesk((s) => s.running);
   const bankroll = useDesk((s) => s.bankroll) ?? 10000;
   const setSims = useDesk((s) => s.setSims);
-  const setChaos = useDesk((s) => s.setChaos);
   const setBankroll = useDesk((s) => s.setBankroll);
   const run = useDesk((s) => s.run);
   const lastRunAt = useDesk((s) => s.lastRunAt);
@@ -53,10 +50,6 @@ export function RunBar() {
             onChange={(e) => setBankroll(Number(e.target.value) || 0)}
             className="h-10 w-28"
           />
-        </label>
-        <label className="flex h-10 min-h-10 items-center gap-2 text-sm">
-          <Switch checked={chaos} onCheckedChange={setChaos} disabled={running} />
-          <span>Chaos engine</span>
         </label>
       </div>
       <div className="flex items-center gap-3">

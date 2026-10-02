@@ -7,7 +7,10 @@ import { swingsFor } from "./outs.ts";
 import { wouldTake, bestTake } from "./card.ts";
 import { evFromProb, impliedProb, kellyFraction } from "./odds.ts";
 import { unofficialWinners } from "./card.ts";
-import { GAMES, getGame } from "./slate.ts";
+// Use the priced slate everywhere: `GAMES` is the raw seed, `GAMES_WITH_LINES`
+// is what `activeGames()` hands the engine, with both sides of every spread
+// quoted. Testing the raw seed would exercise a market the desk never sees.
+import { GAMES_WITH_LINES as GAMES, getGame, pairedPrice, withAwayPrice } from "./slate.ts";
 import { DEFAULT_PRIORS, setPriors } from "./priors.ts";
 import type { NflGame } from "./types.ts";
 
@@ -24,8 +27,8 @@ import type { NflGame } from "./types.ts";
 const SIMS = 12000;
 const SEED = 20260921;
 
-function slate(chaos = false) {
-  return GAMES.map((g) => simulateGame(g, SIMS, SEED, chaos));
+function slate() {
+  return GAMES.map((g) => simulateGame(g, SIMS, SEED));
 }
 
 describe("market anchoring — no double counting", () => {
@@ -64,7 +67,7 @@ describe("market anchoring — no double counting", () => {
     for (const game of GAMES) {
       const g = neutral(game);
       const cond = conditionAdjustments(g);
-      const r = simulateGame(g, 40000, 31337, false, { outIds: [] });
+      const r = simulateGame(g, 40000, 31337, { outIds: [] });
       const expected = -g.line.spread + cond.homePts - cond.awayPts;
       assert.ok(
         Math.abs(r.meanMargin - expected) < 0.35,
@@ -77,7 +80,7 @@ describe("market anchoring — no double counting", () => {
     for (const game of GAMES) {
       const g = neutral(game);
       const cond = conditionAdjustments(g);
-      const r = simulateGame(g, 40000, 31337, false, { outIds: [] });
+      const r = simulateGame(g, 40000, 31337, { outIds: [] });
       const expected = g.line.total + cond.homePts + cond.awayPts;
       assert.ok(
         Math.abs(r.meanTotal - expected) < 0.45,
@@ -92,7 +95,7 @@ describe("market anchoring — no double counting", () => {
     // level to the line: no team profile may move the scoring level.
     const g = neutral(GAMES[2]!);
     const cond = conditionAdjustments(g);
-    const r = simulateGame(g, 40000, 2468, false, { outIds: [] });
+    const r = simulateGame(g, 40000, 2468, { outIds: [] });
     const expected = g.line.total + cond.homePts + cond.awayPts;
     assert.ok(Math.abs(r.meanTotal - expected) < 0.45, "team profile is leaking into the total");
   });
@@ -106,12 +109,111 @@ describe("market anchoring — no double counting", () => {
       const g = neutral(game);
       const cond = conditionAdjustments(g);
       const base = -g.line.spread + cond.homePts - cond.awayPts;
-      const r = simulateGame(g, 20000, 1357, false, {
+      const r = simulateGame(g, 20000, 1357, {
         outIds: swingsFor(g.id).map((s) => s.id),
       });
       if (Math.abs(r.meanMargin - base) > 0.05) moved += 1;
     }
     assert.ok(moved > 0, "confirmed outs did not move any level — the one valid input is unwired");
+  });
+});
+
+describe("two-way market pricing", () => {
+  /**
+   * Regression: the engine grades both sides of a spread and used to fall back
+   * to the home price when `awaySpreadPrice` was missing — which it always was
+   * on the seeded slate. Both sides got the same price while the model gave
+   * them different probabilities, so the underdog carried a phantom negative
+   * EV and every aggregate EV figure on the desk was dragged down.
+   *
+   * The invariant: a seeded spread is a complete two-way market whose implied
+   * probabilities sum to 1 + book margin, never 2x one side's price.
+   */
+  it("gives every seeded spread a real away price", () => {
+    for (const g of GAMES) {
+      assert.ok(g.line.awaySpreadPrice != null, `${g.id}: no away-side price`);
+      assert.notEqual(
+        g.line.awaySpreadPrice,
+        g.line.spreadPrice,
+        `${g.id}: away price is the home price — both sides priced identically`,
+      );
+    }
+  });
+
+  it("keeps the two-way margin near the book target", () => {
+    for (const g of GAMES) {
+      const sum = impliedProb(g.line.spreadPrice) + impliedProb(g.line.awaySpreadPrice!);
+      assert.ok(sum > 1 && sum < 1.08, `${g.id}: two-way implied sum ${sum.toFixed(4)} is not a real market`);
+      assert.ok(
+        Math.abs(sum - 1.035) < 0.01,
+        `${g.id}: margin ${((sum - 1) * 100).toFixed(2)}% drifted from the 3.5% target`,
+      );
+    }
+  });
+
+  it("derives a symmetric pair and leaves an explicit price alone", () => {
+    // A standard 3.5% two-way pair is NOT -110/-110 — the book skews the
+    // favourite to worse odds and the dog to plus money, so their implied
+    // probabilities still sum to 1 + margin. Assert the round trip, not a
+    // hard-coded number.
+    const home = impliedProb(-110);
+    const away = impliedProb(pairedPrice(-110));
+    assert.ok(Math.abs(home + away - 1.035) < 0.006, `pair sum ${(home + away).toFixed(4)} off the 1.035 target`);
+    assert.notEqual(pairedPrice(-110), pairedPrice(-120));
+    // Idempotent: an already-paired line must not be re-paired.
+    const once = withAwayPrice({ spread: -3, spreadPrice: -108 } as never);
+    const twice = withAwayPrice(once);
+    assert.equal(once.awaySpreadPrice, twice.awaySpreadPrice);
+  });
+
+  it("prices a seed's two sides so the better one is the one the engine leans", () => {
+    // Before the fix every underdog side showed ~-8% EV purely from the price
+    // artefact. Now the losing side is negative because the model genuinely
+    // rates it worse, and the two EVs sum to roughly the vig.
+    for (const r of slate()) {
+      const home = [r.pick, ...r.alts].find((c) => c.market === "spread" && c.side.startsWith(r.gameId.slice(0, 3)));
+      if (!home) continue;
+      const mate = [r.pick, ...r.alts].find((c) => c.market === "spread" && c !== home)!;
+      assert.ok(home.ev >= mate.ev, `${r.gameId}: lean is worse than its opposite side`);
+    }
+  });
+});
+
+describe("no personality branch", () => {
+  /**
+   * Regression: a Denver-only "chaos engine" fired GIANTS_MODE (+21 at p=0.30)
+   * and CLUTCH_LUCK_MODE (+3/+7) on hardcoded ids, then added +3 to either side
+   * in any two-point game. Measured at 5.1 points of cover probability on 30%
+   * of paths, for one franchise, with no evidential basis.
+   *
+   * The invariant: every game runs through the identical generator. No game id,
+   * opponent list, or late-game margin threshold may branch the distribution.
+   */
+  it("produces the same distribution shape for every matchup", () => {
+    for (const r of slate()) {
+      assert.ok(r.stdMargin > 10 && r.stdMargin < 20, `${r.gameId}: SD ${r.stdMargin.toFixed(1)} outside band`);
+    }
+  });
+
+  it("does not branch on a trailing margin", () => {
+    // Clone a game under a different id. Same line, same conditions, no outs.
+    // Nothing about the id may change the simulated distribution.
+    const base = structuredClone(GAMES[0]!);
+    base.line = { ...base.line, spreadOpen: base.line.spread, totalOpen: base.line.total };
+    const clone = structuredClone(base);
+    clone.id = "identity-probe";
+    const a = simulateGame(base, 30000, 424242, { outIds: [] });
+    const b = simulateGame(clone, 30000, 424242, { outIds: [] });
+    assert.ok(
+      Math.abs(a.stdMargin - b.stdMargin) < 0.2,
+      `SD moved on id alone: ${a.stdMargin.toFixed(3)} vs ${b.stdMargin.toFixed(3)}`,
+    );
+  });
+
+  it("exposes no chaos fields on the result", () => {
+    const r = slate()[0]!;
+    const keys = Object.keys(r);
+    assert.ok(!keys.some((k) => /chaos/i.test(k)), `result still carries chaos fields: ${keys.join(",")}`);
   });
 });
 
@@ -167,22 +269,22 @@ describe("margin distribution", () => {
 
 describe("determinism", () => {
   it("reproduces exactly on the same seed and game", () => {
-    const a = simulateGame(GAMES[0]!, 2000, 4242, false);
-    const b = simulateGame(GAMES[0]!, 2000, 4242, false);
+    const a = simulateGame(GAMES[0]!, 2000, 4242);
+    const b = simulateGame(GAMES[0]!, 2000, 4242);
     assert.equal(a.pick.ev, b.pick.ev);
     assert.equal(a.stdMargin, b.stdMargin);
     assert.equal(a.homeCover, b.homeCover);
   });
 
   it("decorrelates games — different ids must not share a stream", () => {
-    const a = simulateGame(GAMES[0]!, 2000, 4242, false);
-    const b = simulateGame(GAMES[1]!, 2000, 4242, false);
+    const a = simulateGame(GAMES[0]!, 2000, 4242);
+    const b = simulateGame(GAMES[1]!, 2000, 4242);
     assert.notEqual(a.homeCover, b.homeCover);
   });
 
   it("converges tighter as sims rise", () => {
     const sd = (n: number) => {
-      const evs = Array.from({ length: 12 }, (_, i) => simulateGame(GAMES[0]!, n, 900 + i * 53, false).pick.ev);
+      const evs = Array.from({ length: 12 }, (_, i) => simulateGame(GAMES[0]!, n, 900 + i * 53).pick.ev);
       const mean = evs.reduce((s, v) => s + v, 0) / evs.length;
       return Math.sqrt(evs.reduce((s, v) => s + (v - mean) ** 2, 0) / (evs.length - 1));
     };
@@ -323,7 +425,7 @@ describe("inert cold start", () => {
 
   it("leaves probability untouched when reliability buckets are empty", () => {
     setPriors(DEFAULT_PRIORS);
-    const r = simulateGame(GAMES[0]!, 4000, 7, false);
+    const r = simulateGame(GAMES[0]!, 4000, 7);
     // With no buckets, sizeProb only applies its fixed 6% shrink toward 0.5,
     // so the sizing probability must never exceed the ranking probability.
     assert.ok(r.pick.sizeProb <= r.pick.prob + 1e-12, "sizing probability exceeded ranking probability");
