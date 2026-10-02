@@ -229,7 +229,26 @@ export function learnFrom(rows: LedgerTicket[]): LearnedPriors {
   const missCounts: Record<string, number> = {};
   for (const t of cal.misses) for (const r of t.reasons) missCounts[r] = (missCounts[r] ?? 0) + 1;
   const missPost = dirichletUpdate(missCounts);
-  const h = (name: string) => posts[name]?.mult ?? 1;
+
+  /**
+   * Haircuts, with one asymmetry: a short sample may only ever SHRINK an
+   * effect, never inflate it.
+   *
+   * The model card claims "we do not inflate on a heater", and the raw
+   * posterior does not honour that on its own — a 10-0 run on the fade tag
+   * drives `mult` to 1.22 and the signal would double in a week. KAPPA = 10
+   * pseudo-counts damp it but do not stop it. So below MIN_SAMPLES a hot
+   * posterior is ignored, while a cold one is honoured. This matches the
+   * existing rule in `posteriorProb`: misses can cut a weight, hits cannot
+   * raise it until there is real evidence behind them.
+   */
+  const MIN_SAMPLES = 30;
+  const h = (name: string) => {
+    const p = posts[name];
+    if (!p) return 1;
+    if (p.n < MIN_SAMPLES && p.mult > 1) return 1;
+    return p.mult;
+  };
   const notes: string[] = [];
   const rlm = h("rlm");
   const steam = h("steam");
@@ -296,6 +315,10 @@ export function cardFromRun(
     if (r.sharp?.grade === "sharp" || r.sharp?.grade === "heavy") tags.push("sharp");
     if (g.network === "Prime") tags.push("tnf");
     if ((g.weather.windMph ?? 0) >= 12) tags.push("wind");
+    // Tag every ticket the money-composition fade actually moved. Without this
+    // the `public-fade` posterior is built from zero rows, the haircut stays
+    // pinned at 1 forever, and the fade can never be validated or corrected.
+    if (Math.abs(r.money.tiltPts) > 0.01) tags.push("public-fade");
     rows.push({
       id: `w${week}-${r.gameId}-${bet.market}`,
       week,

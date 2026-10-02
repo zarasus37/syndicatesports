@@ -191,12 +191,18 @@ export function simulateGame(
    * money and reverse line movement all enter here.
    */
   const money = moneyRead(game);
+  // The fade scale is the one part of the money term the graded record gets to
+  // move. It is a haircut, not a coefficient search: a cold posterior shrinks
+  // the fade, and until enough fade-tagged tickets exist a hot one is ignored
+  // rather than amplified. See the guard in `learnFrom`.
+  const fadeScale = getPriors().haircuts.publicFade;
+  const fadePts = money.tiltPts * fadeScale;
   // The tilt is expressed in POINTS OF MARGIN, so it is split across both
   // sides. Adding it whole to home and subtracting whole from away would move
   // the margin by 2x and drag the total with it. A fade is a lean on the
   // spread, not a scoring-level change.
-  hMean += money.tiltPts / 2;
-  aMean -= money.tiltPts / 2;
+  hMean += fadePts / 2;
+  aMean -= fadePts / 2;
 
   const margins: number[] = new Array(nSims);
   const totals: number[] = new Array(nSims);
@@ -337,7 +343,10 @@ export function simulateGame(
     steam: steam.steam,
     steamPts: steam.pts,
     steamDir: steam.dir,
-    money,
+    // Report the EFFECTIVE tilt, after the learned haircut. The invariant tests
+    // and the ledger both compare the simulated mean against this field, so it
+    // has to be what was actually applied rather than the pre-shrink value.
+    money: { ...money, tiltPts: fadePts },
     anomaly,
     sharp: analyzeSharp(game, steam),
     pointBuy,

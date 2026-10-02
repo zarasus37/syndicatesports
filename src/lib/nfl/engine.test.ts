@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { simulateGame } from "./engine.ts";
 import { BASE_STD, BODY_SD, MIN_EV, Q4_SD } from "./config.ts";
 import { conditionAdjustments } from "./conditions.ts";
+import { cardFromRun } from "./learn.ts";
+import { learnFrom } from "./learn.ts";
 import { moneyRead } from "./public.ts";
 import { swingsFor } from "./outs.ts";
 import { wouldTake, bestTake } from "./card.ts";
@@ -13,7 +15,7 @@ import { unofficialWinners } from "./card.ts";
 // quoted. Testing the raw seed would exercise a market the desk never sees.
 import { GAMES_WITH_LINES as GAMES, getGame, pairedPrice, withAwayPrice } from "./slate.ts";
 import { DEFAULT_PRIORS, setPriors } from "./priors.ts";
-import type { NflGame } from "./types.ts";
+import type { LedgerTicket, NflGame } from "./types.ts";
 
 /**
  * Characterization tests for the Monte Carlo engine.
@@ -299,6 +301,127 @@ describe("money composition", () => {
       /handle leans ATL/.test(m.note),
       `note names the wrong money side: "${m.note}"`,
     );
+  });
+});
+
+describe("the fade can actually learn", () => {
+  /**
+   * The desk is meant to move its money-composition coefficient from graded
+   * weeks. That was not true: `publicFade` existed in priors, learnFrom and the
+   * review copy, but no ticket was ever tagged `public-fade`, and the tilt
+   * applied with no haircut at all. The posterior was built from zero rows and
+   * the fade could never be validated or corrected.
+   */
+  it("tags every ticket the fade actually moved", () => {
+    const rows = slate();
+    // A fade game on this slate. The raw run rarely puts a qualifying ticket on
+    // any given fade game, so force one: build a result with a pick that clears
+    // MIN_EV and sizes, then assert it gets tagged. Without this the assertion
+    // below never fires and the test is vacuously green — which is exactly what
+    // it was before.
+    const fadeGame = GAMES.find((g) => moneyRead(g).tiltPts !== 0)!;
+    const real = rows.find((r) => r.gameId === fadeGame.id)!;
+    const forced = { ...real, pick: { ...real.pick, ev: 0.09, kelly: 0.05 } };
+    const tickets = cardFromRun([forced], [], [], GAMES, 3);
+    // Ticket ids are `w{week}-{gameId}-{market}`, e.g. "w3-atl-gb-spread" — so
+    // `endsWith(gameId)` never matches. An earlier version of this test used
+    // endsWith and therefore matched nothing, which is how it stayed green
+    // while the tag was never actually pushed.
+    const row = tickets.find((x) => x.id.includes(fadeGame.id));
+    assert.ok(row, `forced fade game produced no ticket (got ${tickets.map((t) => t.id).join(", ") || "none"})`);
+    assert.ok(
+      row.tags.includes("public-fade"),
+      `fade moved the mean on ${fadeGame.id} but the ticket is untagged: [${row.tags.join(", ")}]`,
+    );
+  });
+
+  it("propagates the learned fade scale into the applied tilt", () => {
+    const fadeGame = GAMES.find((g) => moneyRead(g).tiltPts !== 0)!;
+    const raw = moneyRead(fadeGame).tiltPts;
+
+    setPriors(DEFAULT_PRIORS);
+    const cold = simulateGame(fadeGame, 8000, 99).money.tiltPts;
+    assert.ok(Math.abs(cold - raw) < 1e-9, "identity priors should leave the tilt untouched");
+
+    // A posterior that says the fade is wrong must visibly shrink it.
+    const coldPriors = learnFrom(
+      Array.from({ length: 60 }, (_, i) => ({
+        id: `w3-x-${i}`, week: 3, kind: "spread" as const, matchup: "A @ B", side: "B +3",
+        line: 3, price: -110, prob: 0.58, ev: 0.05, tags: ["public-fade"], clv: 0,
+        result: "loss" as const, reasons: [],
+      })),
+    );
+    assert.ok(coldPriors.haircuts.publicFade < 1, "a 0-60 fade should shrink the coefficient");
+    setPriors(coldPriors);
+    const shrunk = simulateGame(fadeGame, 8000, 99).money.tiltPts;
+    assert.ok(
+      Math.abs(shrunk) < Math.abs(cold),
+      `tilt ${shrunk} did not shrink from ${cold} under haircut ${coldPriors.haircuts.publicFade}`,
+    );
+    setPriors(DEFAULT_PRIORS);
+  });
+
+  it("leaves the fade at identity until there is evidence", () => {
+    assert.equal(DEFAULT_PRIORS.haircuts.publicFade, 1);
+    setPriors(DEFAULT_PRIORS);
+    const on = slate().find((r) => Math.abs(r.money.tiltPts) > 0.01)!;
+    // Cold start: the applied tilt is the raw tilt.
+    assert.equal(on.money.tiltPts, moneyRead(GAMES.find((g) => g.id === on.gameId)!).tiltPts);
+  });
+
+  it("shrinks the fade on a cold posterior but refuses to inflate a hot one", () => {
+    // Build a ledger that is all wins on fade-tagged tickets — a "heater".
+    const wins: LedgerTicket[] = Array.from({ length: 12 }, (_, i) => ({
+      id: `w3-fade-${i}`,
+      week: 3,
+      kind: "spread" as const,
+      matchup: "A @ B",
+      side: "B +3",
+      line: 3,
+      price: -110,
+      prob: 0.58,
+      ev: 0.05,
+      tags: ["public-fade"],
+      clv: 0,
+      result: "win" as const,
+      reasons: [],
+    }));
+    const hot = learnFrom(wins);
+    assert.equal(hot.n, 12);
+    assert.equal(
+      hot.haircuts.publicFade,
+      1,
+      "a 12-0 heater must not inflate the fade before there is evidence",
+    );
+
+    const losses: LedgerTicket[] = wins.map((w, i) => ({ ...w, id: `w3-cold-${i}`, result: "loss" as const }));
+    const cold = learnFrom(losses);
+    assert.ok(
+      cold.haircuts.publicFade < 1,
+      `a 0-12 fade should shrink, got ${cold.haircuts.publicFade}`,
+    );
+  });
+
+  it("lets a fade posterior move once it is past the sample floor", () => {
+    const sample = (n: number, hits: number): LedgerTicket[] =>
+      Array.from({ length: n }, (_, i) => ({
+        id: `w3-f2-${i}`,
+        week: 3,
+        kind: "spread" as const,
+        matchup: "A @ B",
+        side: "B +3",
+        line: 3,
+        price: -110,
+        prob: 0.58,
+        ev: 0.05,
+        tags: ["public-fade"],
+        clv: 0,
+        result: (i < hits ? "win" : "loss") as "win" | "loss",
+        reasons: [],
+      }));
+    // 60 at 80% is a real result, past the 30-ticket floor.
+    const good = learnFrom(sample(60, 48));
+    assert.ok(good.haircuts.publicFade > 1, "60 fade tickets at 80% should lift the fade");
   });
 });
 
