@@ -15,7 +15,7 @@ import { gradeTickets } from "@/lib/nfl/box";
 import { WEEK, activeGames } from "@/lib/nfl/slate";
 import { useDesk } from "@/lib/nfl/store";
 import type { LedgerTicket } from "@/lib/nfl/types";
-import { allWinners, winnerBands, winnerRecord } from "@/lib/nfl/winners";
+import { allWinners, boardWithLiveReads, winnerBands, winnerRecord } from "@/lib/nfl/winners";
 import { cn, formatPct, formatSigned, formatUnits } from "@/lib/utils";
 
 export const Route = createFileRoute("/record")({ component: RecordPage });
@@ -42,6 +42,10 @@ function RecordPage() {
   const games = activeGames();
   const live = liveTrueCard(slate, parlays, props, games);
   const weekWinners = predictions.length ? predictions : lastRunAt ? unofficialWinners(slate, games, WEEK) : [];
+  // Blank rows (deadline passed, never named) are filled with the engine's
+  // current straight-up read and labelled `live` rather than rendered as 0.0%.
+  // See boardWithLiveReads.
+  const boardRows = boardWithLiveReads(weekWinners, lastRunAt ? unofficialWinners(slate, games, WEEK) : []);
   const cardRows = gradeTickets(allTickets(locked), box);
   const cal = calibrate(cardRows);
   const winRows = allWinners(lockedWinners);
@@ -263,7 +267,7 @@ function RecordPage() {
           </p>
         ) : (
           <ol className="grid gap-2 sm:grid-cols-2">
-            {weekWinners.map((w, i) => (
+              {boardRows.map((w, i) => (
               <li key={w.id}>
                 {w.gameId ? (
                   <Link
@@ -273,8 +277,8 @@ function RecordPage() {
                   >
                     <span className="text-sm">
                       <span className="font-mono text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
-                      <Badge variant="outline" className="ml-2">pred</Badge>
-                      <span className="ml-2 font-medium">{w.winner}</span>
+                      <Badge variant={w.named ? "outline" : "default"} className="ml-2">{w.named ? "named" : "live"}</Badge>
+                      <span className="ml-2 font-medium">{w.winner || "\u2014"}</span>
                       <span className="ml-2 text-muted-foreground">{w.matchup}</span>
                     </span>
                     <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatPct(w.pWin)}</span>
@@ -282,7 +286,7 @@ function RecordPage() {
                 ) : (
                   <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
                     <span className="text-sm">
-                      <span className="font-medium">{w.winner}</span>
+                      <span className="font-medium">{w.winner || "\u2014"}</span>
                       <span className="ml-2 text-muted-foreground">{w.matchup}</span>
                     </span>
                     <span className="font-mono text-xs tabular-nums text-muted-foreground">{formatPct(w.pWin)}</span>
@@ -292,6 +296,14 @@ function RecordPage() {
             ))}
           </ol>
         )}
+          {boardRows.some((w) => !w.named) ? (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium">named</span> is a committed pick, written before its
+              deadline and graded against the result. <span className="font-medium">live</span> is the
+              engine&apos;s current straight-up read for a game whose naming window has already closed
+              &mdash; shown for reference, not a prediction of record.
+            </p>
+          ) : null}
       </section>
 
       <section className="space-y-2">

@@ -117,3 +117,31 @@ export function winnerByWeek(rows: WinnerPick[]) {
     return { week, games: xs.length, ...winnerRecord(xs), rows: xs };
   });
 }
+/**
+ * A pick whose naming deadline has passed is stored as an empty row
+ * (winner "", pWin 0) - `applyNamedPicks` refuses to backdate a name, which is
+ * correct and is what makes the graded record honest.
+ *
+ * Rendering that row as-is is what made the board look broken: sixteen rows
+ * with a blank team and 0.0%, and no sign the engine had an opinion at all.
+ * So for any game with no committed name, fall back to the engine's current
+ * straight-up read and label the two states differently. A named pick is
+ * graded; a live read is not yet a prediction of record.
+ */
+export interface BoardRow extends WinnerPick {
+  /** True once the pick was written before its deadline and is a real record. */
+  named: boolean;
+  /** True when this row is the engine's current read, not a committed name. */
+  live: boolean;
+}
+
+export function boardWithLiveReads(committed: WinnerPick[], live: WinnerPick[]): BoardRow[] {
+  const liveByGame = new Map(live.map((w) => [w.gameId ?? w.id, w]));
+  return committed.map((w) => {
+    if (w.pWin > 0 && w.winner) return { ...w, named: true, live: false };
+    const read = liveByGame.get(w.gameId ?? w.id);
+    return read
+      ? { ...read, id: w.id, named: false, live: true }
+      : { ...w, named: false, live: false };
+  });
+}

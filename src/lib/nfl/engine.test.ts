@@ -6,6 +6,7 @@ import { conditionAdjustments } from "./conditions.ts";
 import { cardFromRun } from "./learn.ts";
 import { learnFrom } from "./learn.ts";
 import { moneyRead } from "./public.ts";
+import { boardWithLiveReads } from "./winners.ts";
 import { swingsFor } from "./outs.ts";
 import { wouldTake, bestTake } from "./card.ts";
 import { evFromProb, impliedProb, kellyFraction } from "./odds.ts";
@@ -440,6 +441,62 @@ describe("the fade can actually learn", () => {
     // 60 at 80% is a real result, past the 30-ticket floor.
     const good = learnFrom(sample(60, 48));
     assert.ok(good.haircuts.publicFade > 1, "60 fade tickets at 80% should lift the fade");
+  });
+});
+
+describe("winner board rows", () => {
+  /**
+   * A pick whose naming deadline has passed is stored as `{winner: "", pWin: 0}`
+   * so it can never be backdated into the graded record. That is correct. What
+   * was wrong was rendering those rows verbatim: the board showed sixteen blank
+   * teams at 0.0% and hid the fact that the engine had a live read for every
+   * one of them.
+   */
+  const blank = (id: string, gameId: string) => ({
+    id, week: 3, gameId, matchup: "A @ B", winner: "", pWin: 0, result: "pending" as const,
+  });
+  const read = (gameId: string, winner: string, pWin: number) => ({
+    id: `live-${gameId}`, week: 3, gameId, matchup: "A @ B", winner, pWin, result: "pending" as const,
+  });
+
+  it("keeps a committed pick as named", () => {
+    const rows = boardWithLiveReads([{ ...blank("c1", "g1"), winner: "BUF", pWin: 0.71 }], [read("g1", "BUF", 0.72)]);
+    assert.equal(rows[0]!.named, true);
+    assert.equal(rows[0]!.live, false);
+    assert.equal(rows[0]!.pWin, 0.71, "a committed pick must keep its own probability, not the live one");
+  });
+
+  it("fills a deadline-passed blank with the engine's live read", () => {
+    const rows = boardWithLiveReads([blank("c1", "g1")], [read("g1", "BUF", 0.72)]);
+    assert.equal(rows[0]!.named, false);
+    assert.equal(rows[0]!.live, true);
+    assert.equal(rows[0]!.winner, "BUF");
+    assert.equal(rows[0]!.pWin, 0.72, "the live read must actually populate the row");
+  });
+
+  it("never leaves a rendered row at 0% when a live read exists", () => {
+    const committed = ["g1", "g2", "g3", "g4"].map((g) => blank(`c-${g}`, g));
+    const live = [
+      read("g1", "BUF", 0.72), read("g2", "CLE", 0.55),
+      read("g3", "DET", 0.68), read("g4", "NYG", 0.65),
+    ];
+    const rows = boardWithLiveReads(committed, live);
+    assert.equal(rows.length, 4);
+    for (const r of rows) {
+      assert.ok(r.pWin > 0, `${r.id} still renders 0% — the blank-row bug is back`);
+      assert.ok(r.winner.length > 0, `${r.id} still renders a blank team`);
+    }
+  });
+
+  it("leaves a row blank rather than inventing a read it has none for", () => {
+    const rows = boardWithLiveReads([blank("c1", "g1")], []);
+    assert.equal(rows[0]!.live, false);
+    assert.equal(rows[0]!.pWin, 0);
+  });
+
+  it("preserves the committed row id so React keys stay stable", () => {
+    const rows = boardWithLiveReads([blank("w3-g1-win", "g1")], [read("g1", "BUF", 0.72)]);
+    assert.equal(rows[0]!.id, "w3-g1-win", "id must come from the committed row, not the live read");
   });
 });
 
