@@ -18,6 +18,8 @@ export interface LiveBoard {
   errors: string[];
   week: number;
   games: NflGame[];
+  /** Events listed for the week, so a partial slate is visible rather than silent. */
+  events: number;
   teamForm: TeamFormRow[];
   /** Per-team scoring margins across completed games. */
   teamMargins: Map<TeamAbbr, number[]>;

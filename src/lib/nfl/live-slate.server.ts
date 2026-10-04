@@ -7,6 +7,9 @@ export interface LiveSlate {
   week: number;
   season: number;
   games: NflGame[];
+  /** Events ESPN listed for the week, before odds filtering. A slate can be
+   *  partial: ESPN only carries a spread and total for some games. */
+  events: number;
   quotes: BookQuote[];
   teamForm: TeamFormRow[];
   /** Per-team scoring margins across completed games, for variance derivation. */
@@ -27,6 +30,7 @@ export async function pullWeekSlate(fetchedAt: string): Promise<LiveSlate> {
     week: 0,
     season: 0,
     games: [],
+    events: 0,
     quotes: [],
     teamForm: [],
     teamMargins: new Map(),
@@ -74,6 +78,7 @@ export async function pullWeekSlate(fetchedAt: string): Promise<LiveSlate> {
     week,
     season,
     games,
+    events: events.length,
     quotes,
     teamForm: form,
     teamMargins: leagueMargins,

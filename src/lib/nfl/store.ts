@@ -11,6 +11,10 @@ import { fetchBoxBoard } from "./box-score";
 import { applyGradeToAudit, gradeTicket, type BoxBoard } from "./box";
 import { GAMES, PROPS, SEEDED_WEEK, WEEK, activeGames, getGame, installLiveGames, setCardWeek } from "./slate";
 import { applyTeamVariance } from "./teams";
+
+/** Quorum for treating a live slate as real. ESPN only prices a subset of a week's
+ *  events, so completeness is the wrong bar; below this it is noise. */
+const MIN_LIVE_GAMES = 4;
 import { deriveVariance } from "./variance";
 import { applyTeamForm } from "./teams";
 import { setDeskLive } from "./desk-meta";
@@ -210,7 +214,7 @@ eplace would make
       }
       if (saved?.games?.length) installLiveGames(saved.games, { replace: true });
       else if (saved?.quotes?.length) installLiveGames(applyQuotes(GAMES, saved.quotes));
-    if (saved?.dataMode === "live-books" && (saved.games?.length ?? 0) >= 8) {
+    if (saved?.dataMode === "live-books" && (saved.games?.length ?? 0) >= MIN_LIVE_GAMES) {
       setDeskLive(true, `Posted board · ${(saved.oddsBooks ?? []).join(", ")} · ${saved.oddsFetchedAt ?? ""}`);
     }
     const sw = sheetWeek(saved?.sheetId);
@@ -271,11 +275,15 @@ eplace would make
     let errors = get().oddsErrors;
     let quotes: BookQuote[] = [];
     let liveGames: typeof GAMES = [];
+    let boardGameCount = 0;
+    let boardEventCount = 0;
     let weatherOk = get().weatherOk;
     let injuryOk = get().injuryOk;
     let week = WEEK;
     try {
       const board = await fetchLiveBoard();
+      boardGameCount = board.games.length;
+      boardEventCount = board.events;
       books = board.books;
       fetchedAt = board.fetchedAt;
       errors = board.errors;
@@ -288,7 +296,24 @@ eplace would make
       // a data-driven value the moment there is margin history. Teams with too
       // few games keep the neutral multiplier rather than a bad estimate.
       if (board.teamMargins.size) applyTeamVariance(deriveVariance(board.teamMargins));
-      if (board.games.length >= 8) {
+      /**
+       * Install whatever live slate we actually got.
+       *
+       * The old gate was `board.games.length >= 8`, and it was the wrong
+       * question. ESPN does not carry a spread and total for every event — it
+       * only ships a line once its odds feed has one, so a slate is routinely
+       * partial. Measured today: 16 events listed, 6 with odds, repeatably.
+       *
+       * So the desk was discarding a real week-4 slate and quietly overlaying
+       * week-4 quotes onto the SEEDED week-3 games, then reporting
+       * "sandbox-generated" while the header claimed the live week. Betting a
+       * fictional lineup is strictly worse than showing a short real one.
+       *
+       * The threshold is now a quorum (4) rather than a completeness guess,
+       * and a short slate is labelled as short instead of hidden.
+       */
+      const liveEnough = board.games.length >= MIN_LIVE_GAMES;
+      if (liveEnough) {
         installLiveGames(board.games, { replace: true });
         liveGames = board.games;
       } else if (board.quotes.length) {
@@ -296,11 +321,12 @@ eplace would make
       } else {
         installLiveGames([]);
       }
-      const live = books.length >= 1 && board.games.length >= 8;
+      const live = books.length >= 1 && liveEnough;
+      const coverage = board.events ? `${board.games.length}/${board.events} priced` : `${board.games.length} priced`;
       setDeskLive(
         live,
         live
-          ? `Posted board · ${books.join(", ")} · ${board.fetchedAt}`
+          ? `Posted board · ${books.join(", ")} · ${coverage} · ${board.fetchedAt}`
           : "Seeded sheet — books did not return a slate",
       );
     } catch (err) {
@@ -324,8 +350,8 @@ eplace would make
     const live = liveTrueCard(Object.values(out.results), out.parlays, out.props, games);
     const at = Date.now();
     const runId = makeRunId(at, week);
-    const sheetId = liveGames.length >= 8 ? `live-week-${week}` : SHEET_ID;
-    const dataMode: DataMode = liveGames.length >= 8 && books.length > 0 ? "live-books" : DATA_MODE;
+    const sheetId = liveGames.length >= MIN_LIVE_GAMES ? `live-week-${week}` : SHEET_ID;
+    const dataMode: DataMode = liveGames.length >= MIN_LIVE_GAMES && books.length > 0 ? "live-books" : DATA_MODE;
       setCardWeek(week);
       set({ liveWeek: week });
     const rawPlays = dataMode === "live-books"
@@ -363,7 +389,7 @@ eplace would make
     const reason = plays.length === 0 ? "NO_QUALIFYING_EDGES" : "ok";
     const journal = appendJournal(get().journal, {
       type: "priced",
-      note: `${runId} · RUN_PRICED · ${reason} · card ${plays.length} · books ${books.join("+") || "none"} · su ${predictions.length}`,
+        note: `${runId} · RUN_PRICED · ${reason} · card ${plays.length} · books ${books.join("+") || "none"} · su ${predictions.length} · slate ${boardGameCount}g of ${boardEventCount}e · ${quotes.length}q · w${week}`,
     });
     saveCurrent(
       currentFrom({
