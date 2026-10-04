@@ -9,7 +9,7 @@ import { setActiveOuts, SWINGS } from "./outs";
 import { setPriors, type LearnedPriors } from "./priors";
 import { fetchBoxBoard } from "./box-score";
 import { applyGradeToAudit, gradeTicket, type BoxBoard } from "./box";
-import { GAMES, PROPS, WEEK, activeGames, getGame, installLiveGames } from "./slate";
+import { GAMES, PROPS, SEEDED_WEEK, WEEK, activeGames, getGame, installLiveGames, setCardWeek } from "./slate";
 import { applyTeamVariance } from "./teams";
 import { deriveVariance } from "./variance";
 import { applyTeamForm } from "./teams";
@@ -34,6 +34,10 @@ const OUTS_KEY = "syndicate.outs.v1";
 
 interface DeskState {
   hydrated: boolean;
+  /** The week the desk is actually pricing. Kept in the store rather than read
+   *  from the slate module because that is a mutable, not reactive state - a header
+   *  reading it directly painted the seeded week until something else re-rendered. */
+  liveWeek: number;
   running: boolean;
   sims: number;
   bankroll: number;
@@ -141,6 +145,7 @@ function runSlate(seed: number, sims: number) {
 
 export const useDesk = create<DeskState>()((set, get) => ({
   hydrated: false,
+  liveWeek: SEEDED_WEEK,
   running: false,
   sims: DEFAULT_SIMS,
   bankroll: DEFAULT_BANKROLL,
@@ -183,8 +188,28 @@ export const useDesk = create<DeskState>()((set, get) => ({
     const saved = loadRun();
     const current = loadCurrent();
     const pricedAt = saved?.at ?? current?.pricedAt ?? null;
-    if (saved?.games?.length) installLiveGames(saved.games, { replace: true });
-    else if (saved?.quotes?.length) installLiveGames(applyQuotes(GAMES, saved.quotes));
+      /**
+       * Restore the live week before anything reads it.
+       *
+       * WEEK is a module-level mutable, so it resets to the seeded 3 on every
+       * page load. The desk therefore reloaded showing the seeded week-3 label
+       * while carrying week-4 results - the run id said 
+un_2026w04_... and
+       * the header said WEEK 03.
+       *
+       * Order matters. The persisted week is set first, and the quote-only
+       * fallback below deliberately does NOT pass 
+eplace: true: it overlays
+       * quotes onto the SEEDED week-3 games, and 
+eplace would make
+       * installLiveGames call setCardWeek(3) and undo this line.
+       */
+      if (saved?.week) {
+        setCardWeek(saved.week);
+        set({ liveWeek: saved.week });
+      }
+      if (saved?.games?.length) installLiveGames(saved.games, { replace: true });
+      else if (saved?.quotes?.length) installLiveGames(applyQuotes(GAMES, saved.quotes));
     if (saved?.dataMode === "live-books" && (saved.games?.length ?? 0) >= 8) {
       setDeskLive(true, `Posted board · ${(saved.oddsBooks ?? []).join(", ")} · ${saved.oddsFetchedAt ?? ""}`);
     }
@@ -301,6 +326,8 @@ export const useDesk = create<DeskState>()((set, get) => ({
     const runId = makeRunId(at, week);
     const sheetId = liveGames.length >= 8 ? `live-week-${week}` : SHEET_ID;
     const dataMode: DataMode = liveGames.length >= 8 && books.length > 0 ? "live-books" : DATA_MODE;
+      setCardWeek(week);
+      set({ liveWeek: week });
     const rawPlays = dataMode === "live-books"
       ? collectPlays(Object.values(out.results), out.parlays, out.props, games, runId, at, false)
       : [];
@@ -352,6 +379,7 @@ export const useDesk = create<DeskState>()((set, get) => ({
     saveRun({
       runId,
       sheetId,
+      week,
       at,
       ms: Math.round(performance.now() - t0),
       phase: "priced",

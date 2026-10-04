@@ -12,6 +12,9 @@ const META_KEY = "syndicate.run.meta.v3";
 export interface PersistedRun {
   runId: string;
   sheetId: string;
+  /** The week actually priced. Restored on rehydrate so the header does not
+   *  slide back to the seeded week after a refresh. */
+  week?: number;
   at: number;
   ms: number;
   phase: RunPhase;
@@ -61,6 +64,7 @@ function metaOf(run: PersistedRun) {
   return {
     runId: run.runId,
     sheetId: run.sheetId,
+    week: run.week,
     at: run.at,
     ms: run.ms,
     phase: run.phase,

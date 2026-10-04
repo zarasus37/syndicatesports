@@ -6,7 +6,7 @@ import { AgeGate } from "@/components/desk/age-gate";
 import { CardRail } from "@/components/desk/card-rail";
 import { StatusBar } from "@/components/desk/status-bar";
 import { sheetWeek } from "@/lib/nfl/run-store";
-import { SEASON, SEEDED_WEEK, WEEK } from "@/lib/nfl/slate";
+import { SEASON, SEEDED_WEEK } from "@/lib/nfl/slate";
 import { useDesk } from "@/lib/nfl/store";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +45,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   const sheetId = useDesk((s) => s.sheetId);
-  const week = String(ready ? (sheetWeek(sheetId) ?? WEEK) : SEEDED_WEEK).padStart(2, "0");
+  const liveWeek = useDesk((s) => s.liveWeek);
+  const week = String(ready ? (sheetWeek(sheetId) ?? liveWeek) : SEEDED_WEEK).padStart(2, "0");
 
   return (
     <div className="desk-grid min-h-dvh bg-background text-foreground">
