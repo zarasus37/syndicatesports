@@ -190,7 +190,22 @@ export async function pullLiveBoard(): Promise<LiveBoard> {
       errors.push(res.status === "rejected" ? `${name}: ${res.reason instanceof Error ? res.reason.message : res.reason}` : `${name}: empty`);
     }
   });
-  const games = slate.games.length ? applyQuotes(slate.games, quotes) : [];
+  /**
+   * Keep only games that actually got a line.
+   *
+   * `toGame` now builds a game for every event on the scoreboard so the
+   * schedule is complete, starting from a neutral line where ESPN is silent.
+   * That neutral line is a placeholder (spread 0, total 0) and must never
+   * reach the simulator — a fake line is worse than a missing game, because
+   * the model would price it as if it were real.
+   *
+   * So a game is only usable once a book has quoted it. Coverage shrinks as
+   * games go live: measured 30 quotes at 1:30pm, 12 by 3:40pm, because the
+   * books and ESPN both drop lines for games in progress. The desk runs on
+   * what is genuinely priced and reports the rest as unpriced.
+   */
+  const quoted = slate.games.length ? applyQuotes(slate.games, quotes) : [];
+  const games = quoted.filter((g) => (g.line.books?.length ?? 0) > 0);
   return {
     fetchedAt,
     quotes,

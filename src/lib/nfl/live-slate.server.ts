@@ -141,7 +141,21 @@ function toGame(event: RawEvent, week: number, fetchedAt: string, injuries: Map<
   const awayMl = american(odds?.moneyline?.away?.close?.odds);
   const spreadOpen = american(odds?.pointSpread?.home?.open?.line) ?? homeSpread;
   const totalOpen = american(String(odds?.total?.over?.open?.line ?? "").replace(/[^\d.]/g, "")) ?? total;
-  if (homeSpread == null || total == null) return null;
+    /**
+     * Do NOT drop the game just because ESPN has no line for it.
+     *
+     * ESPN only carries an odds block once its feed has one, and strips them
+     * as games go live. Measured across one afternoon with no code change: 15
+     * games priced, then 6, then 2. Gating on that meant the desk lost games
+     * as kickoff approached, and once enough were lost it fell back to the
+     * seeded slate entirely.
+     *
+     * ESPN is the schedule (teams, kickoff, venue, weather). The books are the
+     * prices. A game with a date and two known teams is real even when ESPN is
+     * silent about its line, and applyQuotes fills the line from the book
+     * consensus. So keep the game and start it on a neutral line.
+     */
+    const hasEspnLine = homeSpread != null && total != null;
   const venueName = comp.venue?.fullName ?? "Stadium";
   const city = comp.venue?.address?.city ?? "";
   const country = comp.venue?.address?.country ?? "";
@@ -150,8 +164,7 @@ function toGame(event: RawEvent, week: number, fetchedAt: string, injuries: Map<
   const indoor = Boolean(comp.venue?.indoor) || (!neutral && park?.roof === "dome");
   const roof: GameWeather["roof"] = neutral ? "neutral" : indoor ? "dome" : park?.roof === "retractable" ? "retractable" : "open";
   const id = gameId(away, home);
-  const priced =
-    homePrice != null && awayPrice != null && overPrice != null && underPrice != null && homeMl != null && awayMl != null;
+    const priced = hasEspnLine && homePrice != null && awayPrice != null && overPrice != null && underPrice != null && homeMl != null && awayMl != null;
   const quote: BookQuote | null = priced
     ? {
         book: "DraftKings",
@@ -182,12 +195,12 @@ function toGame(event: RawEvent, week: number, fetchedAt: string, injuries: Map<
     away,
     home,
     line: {
-      spread: homeSpread,
-      spreadOpen: spreadOpen ?? homeSpread,
+        spread: homeSpread ?? 0,
+        spreadOpen: spreadOpen ?? homeSpread ?? 0,
       spreadPrice: homePrice ?? -110,
       awaySpreadPrice: awayPrice ?? -110,
-      total,
-      totalOpen: totalOpen ?? total,
+        total: total ?? 0,
+        totalOpen: totalOpen ?? total ?? 0,
       overPrice: overPrice ?? -110,
       underPrice: underPrice ?? -110,
       homeMl: homeMl ?? -110,

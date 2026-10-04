@@ -9,12 +9,8 @@ import { setActiveOuts, SWINGS } from "./outs";
 import { setPriors, type LearnedPriors } from "./priors";
 import { fetchBoxBoard } from "./box-score";
 import { applyGradeToAudit, gradeTicket, type BoxBoard } from "./box";
-import { GAMES, PROPS, SEEDED_WEEK, WEEK, activeGames, getGame, installLiveGames, setCardWeek } from "./slate";
+import { GAMES, MIN_LIVE_GAMES, PROPS, SEEDED_WEEK, WEEK, activeGames, getGame, installLiveGames, setCardWeek } from "./slate";
 import { applyTeamVariance } from "./teams";
-
-/** Quorum for treating a live slate as real. ESPN only prices a subset of a week's
- *  events, so completeness is the wrong bar; below this it is noise. */
-const MIN_LIVE_GAMES = 4;
 import { deriveVariance } from "./variance";
 import { applyTeamForm } from "./teams";
 import { setDeskLive } from "./desk-meta";

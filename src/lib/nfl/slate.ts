@@ -1,6 +1,10 @@
 import { impliedProb, probToAmerican } from "./odds";
 import type { NflGame, PropLine } from "./types";
 
+/** Quorum for treating a live slate as real. ESPN and the books both drop lines
+ *  for games in progress, so completeness is the wrong bar; below this it is noise. */
+export const MIN_LIVE_GAMES = 4;
+
 export const SEASON = 2026;
 export const SEEDED_WEEK = 3;
 export let WEEK = SEEDED_WEEK;
@@ -295,7 +299,10 @@ export function setCardWeek(week: number) {
 
 export function installLiveGames(games: NflGame[], opts?: { replace?: boolean }) {
   liveById.clear();
-  if (opts?.replace && games.length >= 8) {
+  // Same quorum as the store. This used to demand 8 games, so a slate of 6
+  // real ones was silently refused and the desk fell back to the seeded
+  // slate — the exact substitution the caller was trying to prevent.
+  if (opts?.replace && games.length >= MIN_LIVE_GAMES) {
     replacement = games;
     setCardWeek(games[0]?.week ?? WEEK);
   } else if (!games.length) {
